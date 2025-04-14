@@ -225,6 +225,11 @@ export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
   const messages = conversation.messages || [];
   console.log(`DEBUG - Processing ${messages.length} messages for conversation ${conversation.id}`);
 
+  // For debugging - log all messages
+  messages.forEach((msg, idx) => {
+    console.log(`DEBUG - Message[${idx}]: id=${msg.id}, type=${msg.message_type}, sender=${msg.sender_type}`);
+  });
+
   // Find the last non-automated agent message
   let lastNonAutomatedAgentMessage = null;
   let lastNonAutomatedAgentIndex = -1;
@@ -254,16 +259,34 @@ export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
     return count;
   }
 
-  // Count customer messages before the last non-automated agent message
-  // Since in Chatwoot messages are ordered newest to oldest (index 0 is newest),
-  // we need to count all customer messages after the agent's message in the array
-  let count = 0;
-  
-  // If there are no messages after lastNonAutomatedAgentIndex, return 0
+  // Check if the most recent message is a non-automated agent message or occurred after it
+  // If so, there are no customer messages since the agent's response
   if (lastNonAutomatedAgentIndex === 0) {
     console.log('DEBUG - Agent message is the newest, no customer messages since, returning 0');
     return 0;
   }
+  
+  // Check if there are customer messages after agent message (newer messages)
+  // Messages[0] is the newest message in Chatwoot 
+  let hasCustomerMessagesAfterAgent = false;
+  
+  for (let i = 0; i < lastNonAutomatedAgentIndex; i++) {
+    if (messages[i].message_type === 0) {
+      hasCustomerMessagesAfterAgent = true;
+      break;
+    }
+  }
+  
+  // If no customer messages after agent response, return 0
+  if (!hasCustomerMessagesAfterAgent) {
+    console.log('DEBUG - No customer messages after agent response, returning 0');
+    return 0;
+  }
+  
+  // Count customer messages before the last non-automated agent message
+  // Since in Chatwoot messages are ordered newest to oldest (index 0 is newest),
+  // we need to count all customer messages after the agent's message in the array
+  let count = 0;
   
   console.log(`DEBUG - Counting customer messages from index 0 to ${lastNonAutomatedAgentIndex-1}`);
   

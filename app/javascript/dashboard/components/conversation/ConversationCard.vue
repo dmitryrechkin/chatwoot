@@ -16,19 +16,21 @@ const customerMessagesSinceResponse = computed(() => {
 });
 
 const fetchMessagesForBatch = debounce(async (conversationIds) => {
+  console.log('🔴 [LEGACY VERSION] fetchMessagesForBatch called for:', conversationIds);
+  
   if (isLoading.value) {
-    console.log('Already loading messages, skipping batch:', conversationIds);
+    console.log('🔴 [LEGACY VERSION] Already loading messages, skipping batch:', conversationIds);
     return;
   }
   
   // Filter out conversations we already have messages for
   const conversationsToFetch = conversationIds.filter(id => !messages.value[id]);
   if (conversationsToFetch.length === 0) {
-    console.log('No new conversations to fetch messages for');
+    console.log('🔴 [LEGACY VERSION] No new conversations to fetch messages for');
     return;
   }
   
-  console.log('Fetching messages for conversations:', conversationsToFetch);
+  console.log('🔴 [LEGACY VERSION] Fetching messages for conversations:', conversationsToFetch);
   
   try {
     isLoading.value = true;
@@ -36,19 +38,19 @@ const fetchMessagesForBatch = debounce(async (conversationIds) => {
       conversation_ids: conversationsToFetch
     });
     
-    console.log('Received messages for conversations:', response.data.map(d => d.conversation_id));
+    console.log('🔴 [LEGACY VERSION] Received messages for conversations:', response.data.map(d => d.conversation_id));
     
     response.data.forEach(conversationData => {
       messages.value[conversationData.conversation_id] = conversationData.messages;
       // Clear cache when new messages arrive
       messageCache.delete(conversationData.conversation_id);
-      console.log('Loaded messages for conversation:', {
+      console.log('🔴 [LEGACY VERSION] Loaded messages for conversation:', {
         id: conversationData.conversation_id,
         messageCount: conversationData.messages.length
       });
     });
   } catch (error) {
-    console.error('Error fetching batch messages:', error);
+    console.error('🔴 [LEGACY VERSION] Error fetching batch messages:', error);
     // Implement retry logic here if needed
   } finally {
     isLoading.value = false;
