@@ -163,51 +163,28 @@ export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
     unreadCount
   });
   
-  const lastMessage = getLastMessage(conversation);
-  console.log('Last message:', JSON.stringify(lastMessage, null, 2));
+  const messages = conversation.messages || [];
+  console.log('Messages array:', JSON.stringify(messages, null, 2));
 
-  // If last message is incoming, use unread count
-  if (lastMessage.message_type === 0) {
-    console.log('Last message is incoming, using unread count:', unreadCount);
-    return unreadCount;
+  // If no messages, return 0
+  if (messages.length === 0) {
+    console.log('No messages found, returning 0');
+    return 0;
   }
 
-  // If last message is automated, we need to find the last non-automated message
-  if (isAutomatedAckMessage(lastMessage, conversation)) {
-    console.log('Last message is automated, finding last non-automated message');
-    const messages = conversation.messages || [];
-    console.log('Messages array:', JSON.stringify(messages, null, 2));
-
-    // Find the last non-automated message
-    let lastNonAutomatedMessage = null;
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (!isAutomatedAckMessage(messages[i], conversation)) {
-        lastNonAutomatedMessage = messages[i];
-        break;
-      }
+  // Find the last non-automated message
+  let lastNonAutomatedMessage = null;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (!isAutomatedAckMessage(messages[i], conversation)) {
+      lastNonAutomatedMessage = messages[i];
+      break;
     }
+  }
 
-    console.log('Last non-automated message found:', JSON.stringify(lastNonAutomatedMessage, null, 2));
+  console.log('Last non-automated message found:', JSON.stringify(lastNonAutomatedMessage, null, 2));
 
-    // If we found a non-automated message and it's a human response, return 0
-    if (lastNonAutomatedMessage && lastNonAutomatedMessage.message_type === 1) {
-      console.log('Found last non-automated message which is a human response, returning 0');
-      return 0;
-    }
-
-    // If we found a non-automated message and it's incoming, count messages after it
-    if (lastNonAutomatedMessage && lastNonAutomatedMessage.message_type === 0) {
-      console.log('Found last non-automated message which is incoming, counting messages after it');
-      let count = 0;
-      for (let i = messages.length - 1; i >= 0; i--) {
-        if (messages[i].id === lastNonAutomatedMessage.id) break;
-        if (messages[i].message_type === 0) count++;
-      }
-      console.log('Counted messages after last non-automated message:', count);
-      return count;
-    }
-
-    // If no non-automated messages found, count all incoming messages
+  // If no non-automated messages found, count all incoming messages
+  if (!lastNonAutomatedMessage) {
     console.log('No non-automated messages found, counting all incoming messages');
     let count = 0;
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -217,10 +194,22 @@ export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
     return count;
   }
 
-  // If last message is a human response, return 0
-  if (lastMessage.message_type === 1) {
-    console.log('Last message is human response, returning 0');
+  // If last non-automated message is a human response, return 0
+  if (lastNonAutomatedMessage.message_type === 1) {
+    console.log('Last non-automated message is human response, returning 0');
     return 0;
+  }
+
+  // If last non-automated message is incoming, count messages after it
+  if (lastNonAutomatedMessage.message_type === 0) {
+    console.log('Last non-automated message is incoming, counting messages after it');
+    let count = 0;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].id === lastNonAutomatedMessage.id) break;
+      if (messages[i].message_type === 0) count++;
+    }
+    console.log('Counted messages after last non-automated message:', count);
+    return count;
   }
 
   // Default case
