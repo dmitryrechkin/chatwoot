@@ -52,7 +52,8 @@ const unreadMessagesCount = computed(() => {
 
 <template>
   <div class="flex flex-col w-full gap-1">
-    <div v-if="emailSubject" class="flex items-center mb-0 text-sm font-medium text-n-slate-12">
+    <div v-if="emailSubject" class="flex items-center mb-0 text-sm font-medium text-n-slate-12" 
+         :class="unreadMessagesCount > 0 ? 'font-medium' : ''">
       <span>↑</span>
       <span class="truncate ml-1">{{ emailSubject }}</span>
     </div>

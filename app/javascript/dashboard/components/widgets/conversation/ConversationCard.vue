@@ -310,6 +310,7 @@ export default {
       <div 
         v-if="chat.additional_attributes && chat.additional_attributes.mail_subject"
         class="conversation--message text-n-slate-12 text-sm my-0 mx-2 leading-6 h-6 max-w-[96%] w-[16.875rem] overflow-hidden text-ellipsis whitespace-nowrap"
+        :class="hasUnread ? 'font-medium' : ''"
       >
         <span>↑</span> {{ chat.additional_attributes.mail_subject }}
       </div>
@@ -344,7 +345,8 @@ export default {
           />
         </span>
         <span
-          class="unread shadow-lg rounded-full hidden text-xxs font-semibold h-4 leading-4 ml-auto mt-1 min-w-[1rem] px-1 py-0 text-center text-white bg-n-teal-9"
+          v-if="unreadCount > 0"
+          class="unread shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 ml-auto mt-1 min-w-[1rem] px-1 py-0 text-center text-white bg-n-teal-9"
         >
           {{ unreadCount > 9 ? '9+' : unreadCount }}
         </span>
@@ -384,6 +386,9 @@ export default {
   &.unread-chat {
     .unread {
       @apply block;
+    }
+    p, div.text-n-slate-12 {
+      @apply font-medium;
     }
   }
 
