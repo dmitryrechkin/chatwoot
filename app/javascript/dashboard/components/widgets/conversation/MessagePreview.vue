@@ -38,10 +38,15 @@ export default {
       const { private: isPrivate } = this.message;
       return isPrivate;
     },
+    emailSubject() {
+      const { content_attributes: contentAttributes } = this.message;
+      const { email: { subject } = {} } = contentAttributes || {};
+      return subject ? this.getPlainText(subject) : null;
+    },
     parsedLastMessage() {
       const { content_attributes: contentAttributes } = this.message;
       const { email: { subject } = {} } = contentAttributes || {};
-      return this.getPlainText(subject || this.message.content);
+      return this.getPlainText(this.message.content);
     },
     lastMessageFileType() {
       const [{ file_type: fileType } = {}] = this.message.attachments;

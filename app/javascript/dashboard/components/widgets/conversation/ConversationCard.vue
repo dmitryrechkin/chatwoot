@@ -297,6 +297,21 @@ export default {
           <PriorityMark :priority="chat.priority" />
         </div>
       </div>
+      
+      <!-- Conversation ID display -->
+      <div class="flex items-center mb-0 mx-2 text-xs text-n-slate-9">
+        <span>#{{ chat.id }}</span>
+      </div>
+      
+      <!-- Email subject display if available -->
+      <div 
+        v-if="lastMessageInChat && lastMessageInChat.content_attributes && lastMessageInChat.content_attributes.email && lastMessageInChat.content_attributes.email.subject"
+        class="flex items-center mb-0 mx-2 text-sm font-medium text-n-brand"
+      >
+        <fluent-icon icon="mail" size="16" class="mr-1" />
+        <span class="truncate">{{ lastMessageInChat.content_attributes.email.subject }}</span>
+      </div>
+      
       <h4
         class="conversation--user text-sm my-0 mx-2 capitalize pt-0.5 text-ellipsis overflow-hidden whitespace-nowrap w-[calc(100%-70px)] text-n-slate-12"
         :class="hasUnread ? 'font-semibold' : 'font-medium'"
