@@ -113,7 +113,7 @@ const customerMessagesSinceResponse = computed(() => {
         <!-- Messages Since Response Indicator (Blue) -->
         <div
           v-if="customerMessagesSinceResponse > 0"
-          class="inline-flex items-center justify-center rounded-full size-5 bg-blue-600"
+          class="inline-flex items-center justify-center rounded-full size-5 bg-n-blue-10"
           :title="customerMessagesSinceResponse === 1 ? '1 message since your last response' : `${customerMessagesSinceResponse} messages since your last response`"
         >
           <span class="text-xs font-semibold text-white">

@@ -385,7 +385,7 @@ export default {
         <!-- Messages Since Response Indicator (Blue) -->
         <span
           v-if="customerMessagesSinceResponse > 0"
-          class="shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 mr-1 min-w-[1rem] px-1 py-0 text-center text-white bg-blue-600"
+          class="shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 mr-1 min-w-[1rem] px-1 py-0 text-center text-white bg-n-blue-10"
           :title="customerMessagesSinceResponse === 1 ? '1 message since your last response' : `${customerMessagesSinceResponse} messages since your last response`"
         >
           {{ customerMessagesSinceResponse }}
