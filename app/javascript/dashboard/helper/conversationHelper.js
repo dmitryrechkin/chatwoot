@@ -172,41 +172,76 @@ export const isAutomatedAckMessage = (message, conversation) => {
  * @returns {number} - The count of customer messages since last human response
  */
 export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
+  console.log('DEBUG - getCustomerMessagesSinceResponse called for:', conversation?.id);
+  
   // If conversation doesn't exist or id is not available, return 0
   if (!conversation || !conversation.id) {
+    console.log('DEBUG - Invalid conversation object');
     return 0;
+  }
+  
+  console.log('DEBUG - Conversation state:', {
+    id: conversation.id,
+    hasLastNonActivityMessage: !!conversation.last_non_activity_message,
+    hasMessages: !!conversation.messages,
+    messageCount: conversation.messages?.length || 0
+  });
+  
+  // First, check if there's unread count from the backend
+  // If there is, we can use that as a fallback
+  const lastMessage = conversation.last_non_activity_message || 
+                     (conversation.messages && conversation.messages.length > 0 ? 
+                      conversation.messages[0] : null);
+  
+  // If we have unread messages and the last message is from customer, use unread count
+  if (unreadCount > 0 && lastMessage && lastMessage.message_type === 0) {
+    console.log(`DEBUG - Using unread count ${unreadCount} as fallback since last message is from customer`);
+    return unreadCount;
   }
   
   // Look for the last_non_activity_message if messages aren't loaded yet
   if (!conversation.messages || conversation.messages.length === 0) {
+    console.log('DEBUG - No messages loaded, checking last_non_activity_message');
     // If we don't have messages loaded yet, but have the lastNonActivityMessage
     // we can use it to determine if it's a customer message
     if (conversation.last_non_activity_message) {
       const lastMsg = conversation.last_non_activity_message;
+      console.log('DEBUG - Last non-activity message:', {
+        id: lastMsg.id,
+        type: lastMsg.message_type,
+        isCustomer: lastMsg.message_type === 0
+      });
+      
       // If the last message is from a customer, count it as 1 unresponded message
       if (lastMsg.message_type === 0) {
+        console.log('DEBUG - Using fallback: Last message is from customer, returning 1');
         return 1;
       }
     }
+    console.log('DEBUG - No customer messages or empty conversation, returning 0');
     return 0;
   }
   
   const messages = conversation.messages || [];
+  console.log(`DEBUG - Processing ${messages.length} messages for conversation ${conversation.id}`);
 
   // Find the last non-automated agent message
   let lastNonAutomatedAgentMessage = null;
   let lastNonAutomatedAgentIndex = -1;
   
-  for (let i = messages.length - 1; i >= 0; i--) {
+  console.log('DEBUG - Searching for last non-automated agent message');
+  for (let i = 0; i < messages.length; i++) {
     const message = messages[i];
     
     // Only consider agent messages (type 1)
     if (message.message_type === 1) {
       const isAutomated = isAutomatedAckMessage(message, conversation);
+      console.log(`DEBUG - Found agent message ${message.id} at index ${i}, automated: ${isAutomated}`);
       
       if (!isAutomated) {
         lastNonAutomatedAgentMessage = message;
         lastNonAutomatedAgentIndex = i;
+        console.log(`DEBUG - Found last non-automated agent message: ${message.id} at index ${i}`);
         break;
       }
     }
@@ -214,20 +249,34 @@ export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
 
   // If no non-automated agent messages found, count all customer messages
   if (!lastNonAutomatedAgentMessage) {
-    return messages.filter(msg => msg.message_type === 0).length;
+    const count = messages.filter(msg => msg.message_type === 0).length;
+    console.log(`DEBUG - No non-automated agent messages found, counting all ${count} customer messages`);
+    return count;
   }
 
-  // Count customer messages after the last non-automated agent message
-  // Since in Chatwoot messages are ordered newest to oldest,
-  // we need to count from index 0 to lastNonAutomatedAgentIndex
+  // Count customer messages before the last non-automated agent message
+  // Since in Chatwoot messages are ordered newest to oldest (index 0 is newest),
+  // we need to count all customer messages after the agent's message in the array
   let count = 0;
+  
+  // If there are no messages after lastNonAutomatedAgentIndex, return 0
+  if (lastNonAutomatedAgentIndex === 0) {
+    console.log('DEBUG - Agent message is the newest, no customer messages since, returning 0');
+    return 0;
+  }
+  
+  console.log(`DEBUG - Counting customer messages from index 0 to ${lastNonAutomatedAgentIndex-1}`);
+  
   for (let i = 0; i < lastNonAutomatedAgentIndex; i++) {
     const message = messages[i];
+    console.log(`DEBUG - Checking message at index ${i}: type=${message.message_type}, id=${message.id}`);
     if (message.message_type === 0) {
       count++;
+      console.log(`DEBUG - Counted customer message, running total: ${count}`);
     }
   }
   
+  console.log(`DEBUG - Final customer messages count: ${count}`);
   return count;
 };
 

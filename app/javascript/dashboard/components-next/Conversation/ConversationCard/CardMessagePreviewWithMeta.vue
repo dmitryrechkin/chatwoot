@@ -68,7 +68,10 @@ const shouldShowUnread = computed(() => {
 });
 
 const customerMessagesSinceResponse = computed(() => {
-  return getCustomerMessagesSinceResponse(props.conversation, props.unreadCount);
+  console.log('CardMessagePreviewWithMeta - computing customerMessagesSinceResponse for:', props.conversation.id);
+  const count = getCustomerMessagesSinceResponse(props.conversation, props.unreadCount);
+  console.log('CardMessagePreviewWithMeta - result:', count);
+  return count;
 });
 
 const hasSlaThreshold = computed(() => {

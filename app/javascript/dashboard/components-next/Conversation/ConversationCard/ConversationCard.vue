@@ -113,11 +113,19 @@ const debounce = (fn, delay) => {
 };
 
 const fetchMessagesForBatch = debounce(async (conversationIds) => {
-  if (isLoading.value) return;
+  if (isLoading.value) {
+    console.log('Skipping batch fetch - already loading');
+    return;
+  }
   
   // Filter out conversations we already have messages for
   const conversationsToFetch = conversationIds.filter(id => !messages.value[id]);
-  if (conversationsToFetch.length === 0) return;
+  if (conversationsToFetch.length === 0) {
+    console.log('No new conversations to fetch');
+    return;
+  }
+  
+  console.log(`Fetching messages for conversations: ${conversationsToFetch.join(', ')}`);
   
   try {
     isLoading.value = true;
@@ -125,11 +133,17 @@ const fetchMessagesForBatch = debounce(async (conversationIds) => {
       conversation_ids: conversationsToFetch
     });
     
+    console.log(`Received batch messages for ${response.data.length} conversations`);
+    
     response.data.forEach(conversationData => {
+      console.log(`Processing messages for conversation ${conversationData.conversation_id}: ${conversationData.messages.length} messages`);
       messages.value[conversationData.conversation_id] = conversationData.messages;
       // Clear cache when new messages arrive
       messageCache.delete(conversationData.conversation_id);
     });
+    
+    // Force a reactivity update by recreating the messages object
+    messages.value = { ...messages.value };
   } catch (error) {
     console.error('Error fetching batch messages:', error);
     // Implement retry logic here if needed
@@ -140,8 +154,11 @@ const fetchMessagesForBatch = debounce(async (conversationIds) => {
 
 // Priority loading for conversations with unread messages
 const loadVisibleMessages = () => {
+  console.log('loadVisibleMessages called for ConversationCard');
   const conversations = props.conversations
     .filter(conv => !messages.value[conv.id]);
+    
+  console.log(`Found ${conversations.length} conversations without loaded messages`);
     
   // Split into priority and regular conversations
   const priorityConversations = conversations
@@ -154,6 +171,8 @@ const loadVisibleMessages = () => {
     
   const conversationsToLoad = [...priorityConversations, ...regularConversations];
   
+  console.log(`Attempting to load messages for ${conversationsToLoad.length} conversations`);
+  
   if (conversationsToLoad.length > 0) {
     fetchMessagesForBatch(conversationsToLoad.map(conv => conv.id));
   }
@@ -161,11 +180,13 @@ const loadVisibleMessages = () => {
 
 // Add intersection observer for lazy loading
 const setupIntersectionObserver = () => {
+  console.log('Setting up intersection observer');
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
         const conversationId = entry.target.dataset.conversationId;
         if (conversationId && !messages.value[conversationId]) {
+          console.log(`Conversation ${conversationId} visible, loading messages`);
           fetchMessagesForBatch([conversationId]);
         }
       }
@@ -176,11 +197,29 @@ const setupIntersectionObserver = () => {
 };
 
 onMounted(() => {
+  console.log('ConversationCard component mounted');
   const observer = setupIntersectionObserver();
+  
   // Apply observer to conversation elements
-  document.querySelectorAll('[data-conversation-id]').forEach(el => {
+  const elements = document.querySelectorAll('[data-conversation-id]');
+  console.log(`Found ${elements.length} conversation elements to observe`);
+  elements.forEach(el => {
     observer.observe(el);
   });
+  
+  // Pre-load messages for the current conversation immediately
+  if (props.conversation && props.conversation.id) {
+    console.log(`Preloading messages for current conversation ${props.conversation.id}`);
+    // Use a shorter timeout to make the initial load faster
+    setTimeout(() => {
+      fetchMessagesForBatch([props.conversation.id]);
+    }, 50);
+  }
+  
+  // Pre-load messages for visible conversations with a short delay
+  setTimeout(() => {
+    loadVisibleMessages();
+  }, 100);
 });
 
 // Provide enhanced message access with caching
@@ -223,6 +262,7 @@ provide('conversationMessages', {
     role="button"
     class="flex w-full gap-3 px-3 py-4 transition-all duration-300 ease-in-out cursor-pointer"
     @click="onCardClick"
+    :data-conversation-id="conversation.id"
   >
     <Avatar
       :name="currentContactName"
