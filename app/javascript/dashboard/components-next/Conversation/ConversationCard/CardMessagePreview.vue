@@ -111,6 +111,7 @@ const isAutomatedAckMessage = (message) => {
 };
 
 const customerMessagesSinceResponse = computed(() => {
+  console.log('Conversation props:', props.conversation);
   const { messages = [] } = props.conversation;
   
   console.log('All messages:', messages);
