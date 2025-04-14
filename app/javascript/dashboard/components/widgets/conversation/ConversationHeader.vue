@@ -128,9 +128,7 @@ export default {
       );
     },
     emailSubject() {
-      const { customAttributes = {} } = this.chat;
-      const { email: { subject } = {} } = customAttributes;
-      return subject;
+      return this.chat.additional_attributes?.mail_subject;
     },
   },
 };

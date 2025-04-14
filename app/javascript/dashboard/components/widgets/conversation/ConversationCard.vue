@@ -308,10 +308,10 @@ export default {
       
       <!-- Email subject display if available with arrow and gray text -->
       <div 
-        v-if="lastMessageInChat && lastMessageInChat.content_attributes && lastMessageInChat.content_attributes.email && lastMessageInChat.content_attributes.email.subject"
+        v-if="chat.additional_attributes && chat.additional_attributes.mail_subject"
         class="conversation--message text-n-slate-9 text-sm my-0 mx-2 leading-6 h-6 max-w-[96%] w-[16.875rem] overflow-hidden text-ellipsis whitespace-nowrap"
       >
-        <span>↑</span> {{ lastMessageInChat.content_attributes.email.subject }}
+        <span>↑</span> {{ chat.additional_attributes.mail_subject }}
       </div>
       
       <MessagePreview

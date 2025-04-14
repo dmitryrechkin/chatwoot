@@ -34,9 +34,8 @@ const lastNonActivityMessageContent = computed(() => {
 });
 
 const emailSubject = computed(() => {
-  const { customAttributes = {} } = props.conversation;
-  const { email: { subject } = {} } = customAttributes;
-  return subject ? getPlainText(subject) : null;
+  const { additional_attributes: additionalAttributes = {} } = props.conversation;
+  return additionalAttributes.mail_subject || null;
 });
 
 const conversationId = computed(() => {
