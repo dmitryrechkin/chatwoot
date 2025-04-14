@@ -141,8 +141,6 @@ export default {
 
     // Calculate the number of customer messages since last agent response
     customerMessagesSinceResponse() {
-      console.log('ConversationCard - customerMessagesSinceResponse called');
-      console.log('Chat object:', this.chat);
       return getCustomerMessagesSinceResponse(this.chat, this.unreadCount);
     },
 

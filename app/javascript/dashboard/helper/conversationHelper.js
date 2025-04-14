@@ -172,82 +172,62 @@ export const isAutomatedAckMessage = (message, conversation) => {
  * @returns {number} - The count of customer messages since last human response
  */
 export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
-  console.log('getCustomerMessagesSinceResponse called with:', {
-    conversationId: conversation.id,
-    unreadCount,
-    hasMessages: !!conversation.messages,
-    messageCount: conversation.messages?.length || 0
-  });
-  
-  const messages = conversation.messages || [];
-  console.log(`Messages array for conversation ${conversation.id} has ${messages.length} messages`);
-
-  // If no messages, return 0
-  if (messages.length === 0) {
-    console.log('No messages found, returning 0');
+  // If conversation doesn't exist or id is not available, return 0
+  if (!conversation || !conversation.id) {
     return 0;
   }
+  
+  // Look for the last_non_activity_message if messages aren't loaded yet
+  if (!conversation.messages || conversation.messages.length === 0) {
+    // If we don't have messages loaded yet, but have the lastNonActivityMessage
+    // we can use it to determine if it's a customer message
+    if (conversation.last_non_activity_message) {
+      const lastMsg = conversation.last_non_activity_message;
+      // If the last message is from a customer, count it as 1 unresponded message
+      if (lastMsg.message_type === 0) {
+        return 1;
+      }
+    }
+    return 0;
+  }
+  
+  const messages = conversation.messages || [];
 
   // Find the last non-automated agent message
   let lastNonAutomatedAgentMessage = null;
   let lastNonAutomatedAgentIndex = -1;
   
-  console.log('Searching for last non-automated agent message in conversation:', conversation.id);
   for (let i = messages.length - 1; i >= 0; i--) {
     const message = messages[i];
-    console.log(`Checking message ${i}:`, {
-      id: message.id,
-      type: message.message_type,
-      sender: message.sender?.name || message.sender_type,
-      content: message.content?.substring(0, 30) + (message.content?.length > 30 ? '...' : '')
-    });
     
     // Only consider agent messages (type 1)
     if (message.message_type === 1) {
       const isAutomated = isAutomatedAckMessage(message, conversation);
-      console.log(`Agent message ${message.id} is${isAutomated ? '' : ' not'} automated`);
       
       if (!isAutomated) {
         lastNonAutomatedAgentMessage = message;
         lastNonAutomatedAgentIndex = i;
-        console.log('Found last non-automated agent message:', {
-          id: message.id,
-          index: i,
-          content: message.content?.substring(0, 30) + (message.content?.length > 30 ? '...' : '')
-        });
         break;
       }
     }
   }
 
-  console.log('Last non-automated agent message:', lastNonAutomatedAgentMessage ? {
-    id: lastNonAutomatedAgentMessage.id,
-    index: lastNonAutomatedAgentIndex
-  } : 'None found');
-
   // If no non-automated agent messages found, count all customer messages
   if (!lastNonAutomatedAgentMessage) {
-    console.log('No non-automated agent messages found, counting all customer messages');
-    const count = messages.filter(msg => msg.message_type === 0).length;
-    console.log(`Total customer messages count: ${count}`);
-    return count;
+    return messages.filter(msg => msg.message_type === 0).length;
   }
 
-  // Count all customer messages after the last non-automated agent message
+  // Count customer messages after the last non-automated agent message
+  // Since in Chatwoot messages are ordered newest to oldest,
+  // we need to count from index 0 to lastNonAutomatedAgentIndex
   let count = 0;
-  console.log(`Counting customer messages after agent response at index ${lastNonAutomatedAgentIndex}`);
-  
-  // FIX: In Chatwoot, messages are ordered newest to oldest (descending order)
-  // So we need to count customer messages from index 0 to lastNonAutomatedAgentIndex
   for (let i = 0; i < lastNonAutomatedAgentIndex; i++) {
     const message = messages[i];
     if (message.message_type === 0) {
       count++;
-      console.log(`Counting message ${message.id} at index ${i}, running count: ${count}`);
     }
   }
   
-  console.log(`Final customer messages count: ${count}`);
   return count;
 };
 

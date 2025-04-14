@@ -256,12 +256,14 @@ provide('conversationMessages', {
       <CardMessagePreview
         v-show="showMessagePreviewWithoutMeta"
         :conversation="conversation"
+        :unread-count="conversation.unread_count"
       />
       <CardMessagePreviewWithMeta
         v-show="!showMessagePreviewWithoutMeta"
         ref="cardMessagePreviewWithMetaRef"
         :conversation="conversation"
         :account-labels="accountLabels"
+        :unread-count="conversation.unread_count"
       />
     </div>
   </div>

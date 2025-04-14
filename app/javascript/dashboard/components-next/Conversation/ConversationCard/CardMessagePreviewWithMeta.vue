@@ -25,7 +25,7 @@ const props = defineProps({
   },
   unreadCount: {
     type: Number,
-    required: true,
+    default: 0,
   },
 });
 
@@ -68,17 +68,7 @@ const shouldShowUnread = computed(() => {
 });
 
 const customerMessagesSinceResponse = computed(() => {
-  console.log('CardMessagePreviewWithMeta - customerMessagesSinceResponse called for conversation:', props.conversation.id);
-  console.log('Conversation object:', {
-    id: props.conversation.id,
-    unreadCount: props.unreadCount,
-    hasMessages: !!props.conversation.messages,
-    messageCount: props.conversation.messages?.length || 0
-  });
-  
-  const count = getCustomerMessagesSinceResponse(props.conversation, props.unreadCount);
-  console.log('CardMessagePreviewWithMeta - customerMessagesSinceResponse result:', count);
-  return count;
+  return getCustomerMessagesSinceResponse(props.conversation, props.unreadCount);
 });
 
 const hasSlaThreshold = computed(() => {
