@@ -153,9 +153,17 @@ export default {
         return 0;
       }
       
-      // Find the last outgoing message from the agent
       const messages = [...this.chat.messages].reverse();
-      const lastOutgoingIndex = messages.findIndex(message => message.message_type === 1); // 1 for outgoing
+      
+      // Find the last meaningful outgoing message from the agent (non-automated)
+      const lastOutgoingIndex = messages.findIndex(message => {
+        // Consider a message outgoing only if it's:
+        // 1. message_type === 1 (outgoing)
+        // 2. NOT an automated ACK message
+        return message.message_type === 1 && 
+          // Filter out automated messages - check for ACK patterns
+          !this.isAutomatedAckMessage(message);
+      });
       
       // If no outgoing message found, all messages are from customer
       if (lastOutgoingIndex === -1) {
@@ -190,6 +198,45 @@ export default {
     },
   },
   methods: {
+    isAutomatedAckMessage(message) {
+      if (!message) return false;
+      
+      // CASE 1: Check automation rule ID in content_attributes
+      // This identifies messages created by automation rules
+      if (message.content_attributes && 
+          (message.content_attributes.automation_rule_id || 
+           message.content_attributes.automated === true)) {
+        return true;
+      }
+      
+      // CASE 2: Check campaign ID in additional_attributes
+      // This identifies messages created by a campaign
+      if (message.additional_attributes && 
+          message.additional_attributes.campaign_id) {
+        return true;
+      }
+      
+      // CASE 3: Check sender type - messages from bots
+      if (message.sender_type === 'AgentBot') {
+        return true;
+      }
+      
+      // CASE 4: Messages sent immediately after conversation creation (within 5 seconds)
+      // This likely identifies automated greetings/welcome messages
+      // Check if the message was created within 5 seconds of the conversation
+      if (this.chat.created_at && message.created_at) {
+        const conversationCreationTime = new Date(this.chat.created_at).getTime();
+        const messageCreationTime = new Date(message.created_at).getTime();
+        const timeDifference = messageCreationTime - conversationCreationTime;
+        
+        // If message was sent within 5 seconds of conversation creation and is outgoing
+        if (timeDifference <= 5000 && message.message_type === 1) {
+          return true;
+        }
+      }
+      
+      return false;
+    },
     onCardClick(e) {
       const { activeInbox, chat } = this;
       const path = frontendURL(
