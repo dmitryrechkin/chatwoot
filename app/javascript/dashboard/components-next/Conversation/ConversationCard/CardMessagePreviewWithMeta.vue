@@ -70,9 +70,9 @@ defineExpose({
 
 <template>
   <div class="flex flex-col w-full gap-1">
-    <div v-if="emailSubject" class="flex items-center mb-0 text-sm font-medium text-n-brand">
-      <Icon icon="mail" size="16" class="mr-1" />
-      <span class="truncate">{{ emailSubject }}</span>
+    <div v-if="emailSubject" class="flex items-center mb-0 text-sm font-medium text-n-slate-9">
+      <span>↑</span>
+      <span class="truncate ml-1">{{ emailSubject }}</span>
     </div>
 
     <div class="flex items-center justify-between w-full gap-2 py-1 h-7">
