@@ -195,9 +195,13 @@ export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
       return count;
     }
 
-    // If no non-automated messages found, return 0
-    console.log('No non-automated messages found, returning 0');
-    return 0;
+    // If no non-automated messages found, count all incoming messages
+    console.log('No non-automated messages found, counting all incoming messages');
+    let count = 0;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].message_type === 0) count++;
+    }
+    return count;
   }
 
   // If last message is a human response, return 0
