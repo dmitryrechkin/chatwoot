@@ -153,63 +153,61 @@ export const isAutomatedAckMessage = (message, conversation) => {
 export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
   console.log('getCustomerMessagesSinceResponse called with:', { conversation, unreadCount });
   
-  if (!conversation) {
-    console.log('No conversation provided, returning 0');
-    return 0;
-  }
-  
   const lastMessage = getLastMessage(conversation);
   console.log('Last message:', lastMessage);
-  
-  if (!lastMessage) {
-    console.log('No last message found, returning 0');
+
+  // If last message is incoming, use unread count
+  if (lastMessage.message_type === 0) {
+    console.log('Last message is incoming, using unread count:', unreadCount);
+    return unreadCount;
+  }
+
+  // If last message is automated, we need to find the last non-automated message
+  if (isAutomatedAckMessage(lastMessage, conversation)) {
+    console.log('Last message is automated, finding last non-automated message');
+    const messages = conversation.messages || [];
+    console.log('Messages array:', messages);
+
+    // Find the last non-automated message
+    let lastNonAutomatedMessage = null;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (!isAutomatedAckMessage(messages[i], conversation)) {
+        lastNonAutomatedMessage = messages[i];
+        break;
+      }
+    }
+
+    // If we found a non-automated message and it's a human response, return 0
+    if (lastNonAutomatedMessage && lastNonAutomatedMessage.message_type === 1) {
+      console.log('Found last non-automated message which is a human response, returning 0');
+      return 0;
+    }
+
+    // If we found a non-automated message and it's incoming, count messages after it
+    if (lastNonAutomatedMessage && lastNonAutomatedMessage.message_type === 0) {
+      console.log('Found last non-automated message which is incoming, counting messages after it');
+      let count = 0;
+      for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].id === lastNonAutomatedMessage.id) break;
+        if (messages[i].message_type === 0) count++;
+      }
+      console.log('Counted messages after last non-automated message:', count);
+      return count;
+    }
+
+    // If no non-automated messages found, return 0
+    console.log('No non-automated messages found, returning 0');
     return 0;
   }
 
-  // If the last message is from customer (incoming)
-  if (lastMessage.message_type === 0) {
-    const count = unreadCount || 1;
-    console.log('Last message is incoming, using unread count:', count);
-    return count;
+  // If last message is a human response, return 0
+  if (lastMessage.message_type === 1) {
+    console.log('Last message is human response, returning 0');
+    return 0;
   }
 
-  // If our last message was automated
-  if (lastMessage.message_type === 1 && isAutomatedAckMessage(lastMessage, conversation)) {
-    const messages = conversation.messages || [];
-    console.log('Messages array:', messages);
-    
-    // Find the last human response
-    const lastHumanResponseIndex = messages
-      .slice()
-      .reverse()
-      .findIndex(msg => 
-        msg.message_type === 1 && 
-        !isAutomatedAckMessage(msg, conversation)
-      );
-    
-    console.log('Last human response index:', lastHumanResponseIndex);
-    
-    // If we found a human response, only count customer messages after it
-    if (lastHumanResponseIndex !== -1) {
-      const customerMessages = messages
-        .slice(messages.length - lastHumanResponseIndex)
-        .filter(msg => msg.message_type === 0)
-        .length;
-      
-      console.log('Found last human response, counting customer messages after it:', customerMessages);
-      return customerMessages || 1;
-    }
-    
-    // If no human response found, count all customer messages
-    const customerMessages = messages
-      .filter(msg => msg.message_type === 0)
-      .length;
-    
-    console.log('No human response found, counting all customer messages:', customerMessages);
-    return customerMessages || 1;
-  }
-
-  console.log('Last message is human response, returning 0');
+  // Default case
+  console.log('Default case, returning 0');
   return 0;
 };
 
