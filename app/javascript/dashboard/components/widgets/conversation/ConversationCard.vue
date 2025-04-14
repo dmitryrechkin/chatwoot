@@ -309,7 +309,7 @@ export default {
       <!-- Email subject display if available with arrow and gray text -->
       <div 
         v-if="chat.additional_attributes && chat.additional_attributes.mail_subject"
-        class="conversation--message text-n-slate-9 text-sm my-0 mx-2 leading-6 h-6 max-w-[96%] w-[16.875rem] overflow-hidden text-ellipsis whitespace-nowrap"
+        class="conversation--message text-n-slate-12 text-sm my-0 mx-2 leading-6 h-6 max-w-[96%] w-[16.875rem] overflow-hidden text-ellipsis whitespace-nowrap"
       >
         <span>↑</span> {{ chat.additional_attributes.mail_subject }}
       </div>
@@ -318,7 +318,7 @@ export default {
         v-if="lastMessageInChat"
         :message="lastMessageInChat"
         class="conversation--message my-0 mx-2 leading-6 h-6 max-w-[96%] w-[16.875rem] text-sm"
-        :class="hasUnread ? 'font-medium text-n-slate-12' : 'text-n-slate-11'"
+        :class="hasUnread ? 'font-medium text-n-slate-12' : 'text-n-slate-9'"
       />
       <p
         v-else

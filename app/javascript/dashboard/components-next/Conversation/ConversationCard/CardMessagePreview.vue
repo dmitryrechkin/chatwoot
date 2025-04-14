@@ -52,12 +52,12 @@ const unreadMessagesCount = computed(() => {
 
 <template>
   <div class="flex flex-col w-full gap-1">
-    <div v-if="emailSubject" class="flex items-center mb-0 text-sm font-medium text-n-slate-9">
+    <div v-if="emailSubject" class="flex items-center mb-0 text-sm font-medium text-n-slate-12">
       <span>↑</span>
       <span class="truncate ml-1">{{ emailSubject }}</span>
     </div>
     <div class="flex items-end w-full gap-2 pb-1">
-      <p class="w-full mb-0 text-sm leading-7 text-n-slate-12 line-clamp-2">
+      <p class="w-full mb-0 text-sm leading-7 text-n-slate-9 line-clamp-2">
         {{ lastNonActivityMessageContent }}
         <span class="text-xs text-n-slate-9"> #{{ conversationId }}</span>
       </p>

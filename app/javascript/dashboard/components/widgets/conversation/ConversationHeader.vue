@@ -178,7 +178,7 @@ export default {
 
           <div
             v-if="emailSubject"
-            class="flex items-center mb-0 text-sm font-medium text-n-brand"
+            class="flex items-center mb-0 text-sm font-medium text-n-slate-12"
           >
             <fluent-icon icon="mail" size="14" class="mr-1" />
             <span class="truncate">{{ emailSubject }}</span>
