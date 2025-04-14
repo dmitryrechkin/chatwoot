@@ -5,7 +5,6 @@ import { useRouter, useRoute } from 'vue-router';
 import { frontendURL, conversationUrl } from 'dashboard/helper/URLHelper.js';
 import { dynamicTime, shortTimestamp } from 'shared/helpers/timeHelper';
 import axios from 'axios';
-import { debounce } from 'lodash';
 
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
@@ -93,6 +92,19 @@ const messages = ref({});
 const isLoading = ref(false);
 const batchSize = 10;
 const messageCache = new Map(); // Cache for computed results
+
+// Simple debounce implementation
+const debounce = (fn, delay) => {
+  let timeoutId;
+  return (...args) => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = setTimeout(() => {
+      fn(...args);
+    }, delay);
+  };
+};
 
 const fetchMessagesForBatch = debounce(async (conversationIds) => {
   if (isLoading.value) return;
