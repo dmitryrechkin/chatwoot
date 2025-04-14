@@ -111,28 +111,25 @@ const isAutomatedAckMessage = (message) => {
 };
 
 const customerMessagesSinceResponse = computed(() => {
-  const { lastNonActivityMessage, unreadCount, messages = [] } = props.conversation;
-  if (!lastNonActivityMessage) return 0;
-
-  // If the last message is from customer (incoming) and we haven't responded yet
-  // or if our last response was automated, show the indicator
-  if (lastNonActivityMessage.message_type === 0) {
-    // Use unread count as a proxy for number of customer messages
-    // since it's already available in the conversation metadata
-    return unreadCount || 1;
+  const { messages = [] } = props.conversation;
+  
+  // Find the index of the last human agent response
+  const lastHumanResponseIndex = [...messages].reverse().findIndex(
+    message => message.message_type === 1 && !isAutomatedAckMessage(message)
+  );
+  
+  // If no human response found, return 0
+  if (lastHumanResponseIndex === -1) {
+    return 0;
   }
   
-  // If our last message was automated, we should still show the indicator
-  if (lastNonActivityMessage.message_type === 1 && isAutomatedAckMessage(lastNonActivityMessage)) {
-    // Look at previous messages if available in metadata
-    const customerMessages = messages
-      .filter(msg => msg.message_type === 0)
-      .length;
-    
-    return customerMessages || 1;
-  }
-
-  return 0;
+  // Get messages after the last human response
+  const messagesSinceLastResponse = messages.slice(-lastHumanResponseIndex);
+  
+  // Count incoming messages since last human response
+  return messagesSinceLastResponse.filter(
+    message => message.message_type === 0
+  ).length;
 });
 
 onMounted(() => {
