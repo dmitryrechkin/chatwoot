@@ -186,7 +186,23 @@ provide('conversationMessages', {
     }
     
     const messages = messages.value[conversationId] || [];
-    const count = messages.filter(
+    
+    // Find the index of the last human agent response
+    const lastHumanResponseIndex = [...messages].reverse().findIndex(
+      message => message.message_type === 'outgoing' && !isAutomatedAckMessage(message)
+    );
+    
+    // If no human response found, return 0
+    if (lastHumanResponseIndex === -1) {
+      messageCache.set(conversationId, 0);
+      return 0;
+    }
+    
+    // Get messages after the last human response
+    const messagesSinceLastResponse = messages.slice(-lastHumanResponseIndex);
+    
+    // Count incoming messages since last human response
+    const count = messagesSinceLastResponse.filter(
       message => message.message_type === 'incoming'
     ).length;
     

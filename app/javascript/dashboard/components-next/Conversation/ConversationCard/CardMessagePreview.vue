@@ -111,23 +111,25 @@ const isAutomatedAckMessage = (message) => {
 };
 
 const customerMessagesSinceResponse = computed(() => {
-  // Use cached message count if available
-  const cachedCount = conversationMessages.getMessageCount(props.conversation.id);
-  if (cachedCount !== undefined) {
-    return cachedCount;
+  const { lastNonActivityMessage, unreadCount, messages = [] } = props.conversation;
+  if (!lastNonActivityMessage) return 0;
+
+  // If the last message is from customer (incoming) and we haven't responded yet
+  // or if our last response was automated, show the indicator
+  if (lastNonActivityMessage.message_type === 0) {
+    // Use unread count as a proxy for number of customer messages
+    // since it's already available in the conversation metadata
+    return unreadCount || 1;
   }
   
-  // Fallback to metadata if messages not loaded yet
-  if (!props.conversation?.lastNonActivityMessage) return 0;
-  const lastMessage = props.conversation.lastNonActivityMessage;
-  const unreadCount = props.conversation.unreadCount || 0;
-
-  if (lastMessage.message_type === 'incoming') {
-    return unreadCount;
-  }
-
-  if (lastMessage.message_type === 'outgoing' && lastMessage.content_attributes?.automated) {
-    return unreadCount;
+  // If our last message was automated, we should still show the indicator
+  if (lastNonActivityMessage.message_type === 1 && isAutomatedAckMessage(lastNonActivityMessage)) {
+    // Look at previous messages if available in metadata
+    const customerMessages = messages
+      .filter(msg => msg.message_type === 0)
+      .length;
+    
+    return customerMessages || 1;
   }
 
   return 0;
