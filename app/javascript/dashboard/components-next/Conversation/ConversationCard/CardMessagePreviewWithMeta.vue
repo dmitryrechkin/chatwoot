@@ -117,29 +117,38 @@ const isAutomatedAckMessage = (message) => {
 
 // Calculate the number of customer messages since last agent response
 const customerMessagesSinceResponse = computed(() => {
+  console.log('CardMessagePreviewWithMeta - customerMessagesSinceResponse called');
+  console.log('Conversation:', props.conversation);
   const { messages } = props.conversation;
+  console.log('Messages array:', messages);
+  
   if (!messages || !messages.length) {
+    console.log('No messages found, returning 0');
     return 0;
   }
   
-  // Find the last meaningful outgoing message from the agent (non-automated)
   const messageArray = [...messages].reverse();
+  console.log('Reversed message array:', messageArray);
+  
   const lastOutgoingIndex = messageArray.findIndex(message => {
-    // Consider a message outgoing only if it's:
-    // 1. message_type === 1 (outgoing)
-    // 2. NOT an automated ACK message
-    return message.message_type === 1 && !isAutomatedAckMessage(message);
+    const isHumanResponse = message.message_type === 1 && !isAutomatedAckMessage(message);
+    console.log('Checking message:', message, 'isHumanResponse:', isHumanResponse);
+    return isHumanResponse;
   });
   
-  // If no outgoing message found, all messages are from customer
+  console.log('Last outgoing index:', lastOutgoingIndex);
+  
   if (lastOutgoingIndex === -1) {
-    // Count only incoming messages
-    return messageArray.filter(message => message.message_type === 0).length;
+    const count = messageArray.filter(message => message.message_type === 0).length;
+    console.log('No human response found, counting all incoming messages:', count);
+    return count;
   }
   
-  // Count incoming messages since last outgoing message
-  return messageArray.slice(0, lastOutgoingIndex)
-    .filter(message => message.message_type === 0).length;
+  const messagesSinceLastResponse = messageArray.slice(0, lastOutgoingIndex);
+  const count = messagesSinceLastResponse.filter(message => message.message_type === 0).length;
+  console.log('Messages since last response:', messagesSinceLastResponse);
+  console.log('Final count:', count);
+  return count;
 });
 
 const hasSlaThreshold = computed(() => {

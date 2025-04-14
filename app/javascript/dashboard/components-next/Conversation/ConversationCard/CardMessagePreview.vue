@@ -13,6 +13,8 @@ const props = defineProps({
   },
 });
 
+console.log('Component setup - props:', props);
+
 const conversationMessages = inject('conversationMessages');
 
 const { t } = useI18n();
@@ -111,41 +113,36 @@ const isAutomatedAckMessage = (message) => {
 };
 
 const customerMessagesSinceResponse = computed(() => {
-  console.log('Conversation props:', props.conversation);
-  const { messages = [] } = props.conversation;
+  console.log('Full conversation object:', props.conversation);
+  console.log('Available properties:', Object.keys(props.conversation));
+  console.log('lastNonActivityMessage:', props.conversation.lastNonActivityMessage);
+  console.log('unreadCount:', props.conversation.unreadCount);
   
-  console.log('All messages:', messages);
-  
-  // Find the index of the last human agent response
-  const lastHumanResponseIndex = [...messages].reverse().findIndex(
-    message => {
-      const isHumanResponse = message.message_type === 1 && !isAutomatedAckMessage(message);
-      console.log('Checking message:', message, 'isHumanResponse:', isHumanResponse);
-      return isHumanResponse;
-    }
-  );
-  
-  console.log('Last human response index:', lastHumanResponseIndex);
-  
-  // If no human response found, return 0
-  if (lastHumanResponseIndex === -1) {
-    return 0;
+  // For now, let's use the original logic that was working
+  const { lastNonActivityMessage, unreadCount } = props.conversation;
+  if (!lastNonActivityMessage) return 0;
+
+  // If the last message is from customer (incoming) and we haven't responded yet
+  // or if our last response was automated, show the indicator
+  if (lastNonActivityMessage.message_type === 0) {
+    // Use unread count as a proxy for number of customer messages
+    // since it's already available in the conversation metadata
+    return unreadCount || 1;
   }
   
-  // Get messages after the last human response
-  const messagesSinceLastResponse = messages.slice(-lastHumanResponseIndex);
-  console.log('Messages since last response:', messagesSinceLastResponse);
-  
-  // Count incoming messages since last human response
-  const count = messagesSinceLastResponse.filter(
-    message => message.message_type === 0
-  ).length;
-  
-  console.log('Final count:', count);
-  return count;
+  // If our last message was automated, we should still show the indicator
+  if (lastNonActivityMessage.message_type === 1 && isAutomatedAckMessage(lastNonActivityMessage)) {
+    return unreadCount || 1;
+  }
+
+  return 0;
 });
 
 onMounted(() => {
+  console.log('Component mounted');
+  console.log('Conversation:', props.conversation);
+  console.log('lastNonActivityMessage:', props.conversation.lastNonActivityMessage);
+  console.log('unreadCount:', props.conversation.unreadCount);
   // fetchMessages();
 });
 </script>

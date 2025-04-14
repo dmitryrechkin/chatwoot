@@ -149,29 +149,40 @@ export default {
 
     // Calculate the number of customer messages since last agent response
     customerMessagesSinceResponse() {
+      console.log('ConversationCard - customerMessagesSinceResponse called');
+      console.log('Chat object:', this.chat);
+      
       // Get the last non-activity message
       const lastMessage = this.lastMessageInChat;
-      if (!lastMessage) return 0;
+      console.log('Last message:', lastMessage);
+      
+      if (!lastMessage) {
+        console.log('No last message found, returning 0');
+        return 0;
+      }
 
       // If the last message is from customer (incoming) and we haven't responded yet
       // or if our last response was automated, show the indicator
       if (lastMessage.message_type === 0) {
-        // Use unread count as a proxy for number of customer messages
-        // since it's already available in the conversation metadata
-        return this.unreadCount || 1;
+        const count = this.unreadCount || 1;
+        console.log('Last message is incoming, using unread count:', count);
+        return count;
       }
 
       // If our last message was automated, we should still show the indicator
       if (lastMessage.message_type === 1 && this.isAutomatedAckMessage(lastMessage)) {
-        // Look at previous messages if available in metadata
         const messages = this.chat.messages || [];
+        console.log('Messages array:', messages);
         const customerMessages = messages
           .filter(msg => msg.message_type === 0)
           .length;
         
-        return customerMessages || 1;
+        const count = customerMessages || 1;
+        console.log('Last message is automated, counting customer messages:', count);
+        return count;
       }
 
+      console.log('Last message is human response, returning 0');
       return 0;
     },
 

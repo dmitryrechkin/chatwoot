@@ -20,6 +20,7 @@ export default {
     },
   },
   setup() {
+    console.log('MessagePreview component mounted');
     const { getPlainText } = useMessageFormatter();
     return {
       getPlainText,
