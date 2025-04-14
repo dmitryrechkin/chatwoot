@@ -5,6 +5,12 @@ import { useRouter, useRoute } from 'vue-router';
 import { frontendURL, conversationUrl } from 'dashboard/helper/URLHelper.js';
 import { dynamicTime, shortTimestamp } from 'shared/helpers/timeHelper';
 import axios from 'axios';
+import { 
+  getLastMessage, 
+  isAutomatedAckMessage, 
+  getCustomerMessagesSinceResponse,
+  shouldShowUnread
+} from 'dashboard/helper/conversationHelper';
 
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';

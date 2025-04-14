@@ -92,3 +92,152 @@ export const getUnreadMessages = (messages, agentLastSeenAt) => {
     message => message.created_at * 1000 > agentLastSeenAt * 1000
   );
 };
+
+/**
+ * Determines if a message is automated based on various criteria
+ * @param {Object} message - The message object to check
+ * @param {Object} conversation - The conversation object containing the message
+ * @returns {boolean} - True if the message is automated, false otherwise
+ */
+export const isAutomatedAckMessage = (message, conversation) => {
+  console.log('isAutomatedAckMessage called with:', { message, conversation });
+  
+  if (!message) {
+    console.log('No message provided, returning false');
+    return false;
+  }
+  
+  // CASE 1: Check automation rule ID in content_attributes
+  if (message.content_attributes && 
+      (message.content_attributes.automation_rule_id || 
+       message.content_attributes.automated === true)) {
+    console.log('Message is automated (CASE 1): Automation rule or automated flag found');
+    return true;
+  }
+  
+  // CASE 2: Check campaign ID in additional_attributes
+  if (message.additional_attributes && 
+      message.additional_attributes.campaign_id) {
+    console.log('Message is automated (CASE 2): Campaign ID found');
+    return true;
+  }
+  
+  // CASE 3: Check sender type - messages from bots
+  if (message.sender_type === 'AgentBot') {
+    console.log('Message is automated (CASE 3): AgentBot sender type');
+    return true;
+  }
+  
+  // CASE 4: Messages sent immediately after conversation creation
+  if (conversation?.created_at && message.created_at) {
+    const conversationCreationTime = new Date(conversation.created_at).getTime();
+    const messageCreationTime = new Date(message.created_at).getTime();
+    const timeDifference = messageCreationTime - conversationCreationTime;
+    
+    if (timeDifference <= 5000 && message.message_type === 1) {
+      console.log('Message is automated (CASE 4): Sent within 5 seconds of conversation creation');
+      return true;
+    }
+  }
+  
+  console.log('Message is not automated');
+  return false;
+};
+
+/**
+ * Calculates the number of customer messages since the last human response
+ * @param {Object} conversation - The conversation object
+ * @param {number} unreadCount - The number of unread messages
+ * @returns {number} - The count of customer messages since last human response
+ */
+export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
+  console.log('getCustomerMessagesSinceResponse called with:', { conversation, unreadCount });
+  
+  if (!conversation) {
+    console.log('No conversation provided, returning 0');
+    return 0;
+  }
+  
+  const lastMessage = getLastMessage(conversation);
+  console.log('Last message:', lastMessage);
+  
+  if (!lastMessage) {
+    console.log('No last message found, returning 0');
+    return 0;
+  }
+
+  // If the last message is from customer (incoming)
+  if (lastMessage.message_type === 0) {
+    const count = unreadCount || 1;
+    console.log('Last message is incoming, using unread count:', count);
+    return count;
+  }
+
+  // If our last message was automated
+  if (lastMessage.message_type === 1 && isAutomatedAckMessage(lastMessage, conversation)) {
+    const messages = conversation.messages || [];
+    console.log('Messages array:', messages);
+    
+    // Find the last human response
+    const lastHumanResponseIndex = messages
+      .slice()
+      .reverse()
+      .findIndex(msg => 
+        msg.message_type === 1 && 
+        !isAutomatedAckMessage(msg, conversation)
+      );
+    
+    console.log('Last human response index:', lastHumanResponseIndex);
+    
+    // If we found a human response, only count customer messages after it
+    if (lastHumanResponseIndex !== -1) {
+      const customerMessages = messages
+        .slice(messages.length - lastHumanResponseIndex)
+        .filter(msg => msg.message_type === 0)
+        .length;
+      
+      console.log('Found last human response, counting customer messages after it:', customerMessages);
+      return customerMessages || 1;
+    }
+    
+    // If no human response found, count all customer messages
+    const customerMessages = messages
+      .filter(msg => msg.message_type === 0)
+      .length;
+    
+    console.log('No human response found, counting all customer messages:', customerMessages);
+    return customerMessages || 1;
+  }
+
+  console.log('Last message is human response, returning 0');
+  return 0;
+};
+
+/**
+ * Determines if a conversation should show the unread indicator
+ * @param {Object} conversation - The conversation object
+ * @param {number} unreadCount - The number of unread messages
+ * @returns {boolean} - True if the unread indicator should be shown
+ */
+export const shouldShowUnread = (conversation, unreadCount) => {
+  console.log('shouldShowUnread called with:', { conversation, unreadCount });
+  
+  // Show unread indicator if there are unread messages according to backend
+  if (unreadCount > 0) {
+    console.log('Unread count > 0, returning true');
+    return true;
+  }
+  
+  // Always show unread indicator if last message is incoming
+  const lastMessage = getLastMessage(conversation);
+  console.log('Last message:', lastMessage);
+  
+  if (lastMessage) {
+    const shouldShow = lastMessage.message_type === 0;
+    console.log('Last message is incoming:', shouldShow);
+    return shouldShow;
+  }
+  
+  console.log('No last message found, returning false');
+  return false;
+};

@@ -2,6 +2,12 @@
 import { computed, ref, onMounted, inject } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
+import { 
+  getLastMessage, 
+  isAutomatedAckMessage, 
+  getCustomerMessagesSinceResponse,
+  shouldShowUnread
+} from 'dashboard/helper/conversationHelper';
 
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
@@ -54,88 +60,11 @@ const unreadMessagesCount = computed(() => {
 });
 
 const shouldShowUnread = computed(() => {
-  // Show unread indicator if there are unread messages according to backend
-  if (unreadMessagesCount.value > 0) {
-    return true;
-  }
-  
-  // Always show unread indicator if last message is incoming
-  // This ensures we mark conversations as "requiring attention" even after viewing
-  const { lastNonActivityMessage } = props.conversation;
-  if (lastNonActivityMessage) {
-    // Message type 0 is incoming and we want to continue showing the indicator
-    // for incoming messages even after they've been seen but not replied to
-    return lastNonActivityMessage.message_type === 0;  
-  }
-  
-  return false;
+  return shouldShowUnread(props.conversation, props.unreadCount);
 });
 
-// Helper function to detect automated ACK messages
-const isAutomatedAckMessage = (message) => {
-  if (!message) return false;
-  
-  // CASE 1: Check automation rule ID in content_attributes
-  // This identifies messages created by automation rules
-  if (message.content_attributes && 
-      (message.content_attributes.automation_rule_id || 
-       message.content_attributes.automated === true)) {
-    return true;
-  }
-  
-  // CASE 2: Check campaign ID in additional_attributes
-  // This identifies messages created by a campaign
-  if (message.additional_attributes && 
-      message.additional_attributes.campaign_id) {
-    return true;
-  }
-  
-  // CASE 3: Check sender type - messages from bots
-  if (message.sender_type === 'AgentBot') {
-    return true;
-  }
-  
-  // CASE 4: Messages sent immediately after conversation creation (within 5 seconds)
-  // This likely identifies automated greetings/welcome messages
-  const conversation = props.conversation;
-  if (conversation.created_at && message.created_at) {
-    const conversationCreationTime = new Date(conversation.created_at).getTime();
-    const messageCreationTime = new Date(message.created_at).getTime();
-    const timeDifference = messageCreationTime - conversationCreationTime;
-    
-    // If message was sent within 5 seconds of conversation creation and is outgoing
-    if (timeDifference <= 5000 && message.message_type === 1) {
-      return true;
-    }
-  }
-  
-  return false;
-};
-
 const customerMessagesSinceResponse = computed(() => {
-  console.log('Full conversation object:', props.conversation);
-  console.log('Available properties:', Object.keys(props.conversation));
-  console.log('lastNonActivityMessage:', props.conversation.lastNonActivityMessage);
-  console.log('unreadCount:', props.conversation.unreadCount);
-  
-  // For now, let's use the original logic that was working
-  const { lastNonActivityMessage, unreadCount } = props.conversation;
-  if (!lastNonActivityMessage) return 0;
-
-  // If the last message is from customer (incoming) and we haven't responded yet
-  // or if our last response was automated, show the indicator
-  if (lastNonActivityMessage.message_type === 0) {
-    // Use unread count as a proxy for number of customer messages
-    // since it's already available in the conversation metadata
-    return unreadCount || 1;
-  }
-  
-  // If our last message was automated, we should still show the indicator
-  if (lastNonActivityMessage.message_type === 1 && isAutomatedAckMessage(lastNonActivityMessage)) {
-    return unreadCount || 1;
-  }
-
-  return 0;
+  return getCustomerMessagesSinceResponse(props.conversation, props.unreadCount);
 });
 
 onMounted(() => {

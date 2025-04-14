@@ -1,6 +1,11 @@
 <script>
 import { mapGetters } from 'vuex';
-import { getLastMessage } from 'dashboard/helper/conversationHelper';
+import { 
+  getLastMessage, 
+  isAutomatedAckMessage, 
+  getCustomerMessagesSinceResponse,
+  shouldShowUnread
+} from 'dashboard/helper/conversationHelper';
 import Thumbnail from '../Thumbnail.vue';
 import MessagePreview from './MessagePreview.vue';
 import router from '../../../routes';
@@ -119,20 +124,7 @@ export default {
     },
 
     shouldShowUnread() {
-      // Show unread indicator if there are unread messages according to backend
-      if (this.unreadCount > 0) {
-        return true;
-      }
-      
-      // Always show unread indicator if last message is incoming
-      // This ensures we mark conversations as "requiring attention" even after viewing
-      if (this.lastMessageInChat) {
-        // Message type 0 is incoming and we want to continue showing the indicator
-        // for incoming messages even after they've been seen but not replied to
-        return this.lastMessageInChat.message_type === 0;  
-      }
-      
-      return false;
+      return shouldShowUnread(this.chat, this.unreadCount);
     },
 
     hasUnread() {
@@ -151,39 +143,7 @@ export default {
     customerMessagesSinceResponse() {
       console.log('ConversationCard - customerMessagesSinceResponse called');
       console.log('Chat object:', this.chat);
-      
-      // Get the last non-activity message
-      const lastMessage = this.lastMessageInChat;
-      console.log('Last message:', lastMessage);
-      
-      if (!lastMessage) {
-        console.log('No last message found, returning 0');
-        return 0;
-      }
-
-      // If the last message is from customer (incoming) and we haven't responded yet
-      // or if our last response was automated, show the indicator
-      if (lastMessage.message_type === 0) {
-        const count = this.unreadCount || 1;
-        console.log('Last message is incoming, using unread count:', count);
-        return count;
-      }
-
-      // If our last message was automated, we should still show the indicator
-      if (lastMessage.message_type === 1 && this.isAutomatedAckMessage(lastMessage)) {
-        const messages = this.chat.messages || [];
-        console.log('Messages array:', messages);
-        const customerMessages = messages
-          .filter(msg => msg.message_type === 0)
-          .length;
-        
-        const count = customerMessages || 1;
-        console.log('Last message is automated, counting customer messages:', count);
-        return count;
-      }
-
-      console.log('Last message is human response, returning 0');
-      return 0;
+      return getCustomerMessagesSinceResponse(this.chat, this.unreadCount);
     },
 
     inbox() {
@@ -209,43 +169,7 @@ export default {
   },
   methods: {
     isAutomatedAckMessage(message) {
-      if (!message) return false;
-      
-      // CASE 1: Check automation rule ID in content_attributes
-      // This identifies messages created by automation rules
-      if (message.content_attributes && 
-          (message.content_attributes.automation_rule_id || 
-           message.content_attributes.automated === true)) {
-        return true;
-      }
-      
-      // CASE 2: Check campaign ID in additional_attributes
-      // This identifies messages created by a campaign
-      if (message.additional_attributes && 
-          message.additional_attributes.campaign_id) {
-        return true;
-      }
-      
-      // CASE 3: Check sender type - messages from bots
-      if (message.sender_type === 'AgentBot') {
-        return true;
-      }
-      
-      // CASE 4: Messages sent immediately after conversation creation (within 5 seconds)
-      // This likely identifies automated greetings/welcome messages
-      // Check if the message was created within 5 seconds of the conversation
-      if (this.chat.created_at && message.created_at) {
-        const conversationCreationTime = new Date(this.chat.created_at).getTime();
-        const messageCreationTime = new Date(message.created_at).getTime();
-        const timeDifference = messageCreationTime - conversationCreationTime;
-        
-        // If message was sent within 5 seconds of conversation creation and is outgoing
-        if (timeDifference <= 5000 && message.message_type === 1) {
-          return true;
-        }
-      }
-      
-      return false;
+      return isAutomatedAckMessage(message, this.chat);
     },
     onCardClick(e) {
       const { activeInbox, chat } = this;
