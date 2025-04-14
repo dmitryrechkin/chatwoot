@@ -57,7 +57,7 @@ const unreadMessagesCount = computed(() => {
       <span class="truncate ml-1">{{ emailSubject }}</span>
     </div>
     <div class="flex items-end w-full gap-2 pb-1">
-      <p class="w-full mb-0 text-sm leading-7 text-n-slate-9 line-clamp-2">
+      <p class="w-full mb-0 text-sm leading-7 text-n-slate-9 line-clamp-2" :class="unreadMessagesCount > 0 ? 'font-medium' : ''">
         {{ lastNonActivityMessageContent }}
         <span class="text-xs text-n-slate-9"> #{{ conversationId }}</span>
       </p>

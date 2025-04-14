@@ -317,13 +317,13 @@ export default {
       <MessagePreview
         v-if="lastMessageInChat"
         :message="lastMessageInChat"
-        class="conversation--message my-0 mx-2 leading-6 h-6 max-w-[96%] w-[16.875rem] text-sm"
-        :class="hasUnread ? 'font-medium text-n-slate-12' : 'text-n-slate-9'"
+        class="conversation--message my-0 mx-2 leading-6 h-6 max-w-[96%] w-[16.875rem] text-sm text-n-slate-9"
+        :class="hasUnread ? 'font-medium' : ''"
       />
       <p
         v-else
-        class="conversation--message text-n-slate-11 text-sm my-0 mx-2 leading-6 h-6 max-w-[96%] w-[16.875rem] overflow-hidden text-ellipsis whitespace-nowrap"
-        :class="hasUnread ? 'font-medium text-n-slate-12' : 'text-n-slate-11'"
+        class="conversation--message text-n-slate-9 text-sm my-0 mx-2 leading-6 h-6 max-w-[96%] w-[16.875rem] overflow-hidden text-ellipsis whitespace-nowrap"
+        :class="hasUnread ? 'font-medium' : ''"
       >
         <fluent-icon
           size="16"
