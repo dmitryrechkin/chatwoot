@@ -1,9 +1,11 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted, watch, provide } from 'vue';
 import { getInboxIconByType } from 'dashboard/helper/inbox';
 import { useRouter, useRoute } from 'vue-router';
 import { frontendURL, conversationUrl } from 'dashboard/helper/URLHelper.js';
 import { dynamicTime, shortTimestamp } from 'shared/helpers/timeHelper';
+import axios from 'axios';
+import { debounce } from 'lodash';
 
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
@@ -25,6 +27,10 @@ const props = defineProps({
     required: true,
   },
   accountLabels: {
+    type: Array,
+    required: true,
+  },
+  conversations: {
     type: Array,
     required: true,
   },
@@ -82,6 +88,100 @@ const onCardClick = e => {
   }
   router.push({ path });
 };
+
+const messages = ref({});
+const isLoading = ref(false);
+const batchSize = 10;
+const messageCache = new Map(); // Cache for computed results
+
+const fetchMessagesForBatch = debounce(async (conversationIds) => {
+  if (isLoading.value) return;
+  
+  // Filter out conversations we already have messages for
+  const conversationsToFetch = conversationIds.filter(id => !messages.value[id]);
+  if (conversationsToFetch.length === 0) return;
+  
+  try {
+    isLoading.value = true;
+    const response = await axios.post('/api/v1/conversations/batch_messages', {
+      conversation_ids: conversationsToFetch
+    });
+    
+    response.data.forEach(conversationData => {
+      messages.value[conversationData.conversation_id] = conversationData.messages;
+      // Clear cache when new messages arrive
+      messageCache.delete(conversationData.conversation_id);
+    });
+  } catch (error) {
+    console.error('Error fetching batch messages:', error);
+    // Implement retry logic here if needed
+  } finally {
+    isLoading.value = false;
+  }
+}, 300); // Debounce for 300ms
+
+// Priority loading for conversations with unread messages
+const loadVisibleMessages = () => {
+  const conversations = props.conversations
+    .filter(conv => !messages.value[conv.id]);
+    
+  // Split into priority and regular conversations
+  const priorityConversations = conversations
+    .filter(conv => conv.unreadCount > 0)
+    .slice(0, batchSize / 2);
+    
+  const regularConversations = conversations
+    .filter(conv => conv.unreadCount === 0)
+    .slice(0, batchSize - priorityConversations.length);
+    
+  const conversationsToLoad = [...priorityConversations, ...regularConversations];
+  
+  if (conversationsToLoad.length > 0) {
+    fetchMessagesForBatch(conversationsToLoad.map(conv => conv.id));
+  }
+};
+
+// Add intersection observer for lazy loading
+const setupIntersectionObserver = () => {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const conversationId = entry.target.dataset.conversationId;
+        if (conversationId && !messages.value[conversationId]) {
+          fetchMessagesForBatch([conversationId]);
+        }
+      }
+    });
+  }, { threshold: 0.1 });
+  
+  return observer;
+};
+
+onMounted(() => {
+  const observer = setupIntersectionObserver();
+  // Apply observer to conversation elements
+  document.querySelectorAll('[data-conversation-id]').forEach(el => {
+    observer.observe(el);
+  });
+});
+
+// Provide enhanced message access with caching
+provide('conversationMessages', {
+  messages,
+  getMessageCount: (conversationId) => {
+    if (messageCache.has(conversationId)) {
+      return messageCache.get(conversationId);
+    }
+    
+    const messages = messages.value[conversationId] || [];
+    const count = messages.filter(
+      message => message.message_type === 'incoming'
+    ).length;
+    
+    messageCache.set(conversationId, count);
+    return count;
+  }
+});
 </script>
 
 <template>

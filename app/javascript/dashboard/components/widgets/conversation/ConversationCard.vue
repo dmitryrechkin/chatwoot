@@ -149,31 +149,30 @@ export default {
 
     // Calculate the number of customer messages since last agent response
     customerMessagesSinceResponse() {
-      if (!this.chat.messages || !this.chat.messages.length) {
-        return 0;
+      // Get the last non-activity message
+      const lastMessage = this.lastMessageInChat;
+      if (!lastMessage) return 0;
+
+      // If the last message is from customer (incoming) and we haven't responded yet
+      // or if our last response was automated, show the indicator
+      if (lastMessage.message_type === 0) {
+        // Use unread count as a proxy for number of customer messages
+        // since it's already available in the conversation metadata
+        return this.unreadCount || 1;
       }
-      
-      const messages = [...this.chat.messages].reverse();
-      
-      // Find the last meaningful outgoing message from the agent (non-automated)
-      const lastOutgoingIndex = messages.findIndex(message => {
-        // Consider a message outgoing only if it's:
-        // 1. message_type === 1 (outgoing)
-        // 2. NOT an automated ACK message
-        return message.message_type === 1 && 
-          // Filter out automated messages - check for ACK patterns
-          !this.isAutomatedAckMessage(message);
-      });
-      
-      // If no outgoing message found, all messages are from customer
-      if (lastOutgoingIndex === -1) {
-        // Count only incoming messages
-        return messages.filter(message => message.message_type === 0).length;
+
+      // If our last message was automated, we should still show the indicator
+      if (lastMessage.message_type === 1 && this.isAutomatedAckMessage(lastMessage)) {
+        // Look at previous messages if available in metadata
+        const messages = this.chat.messages || [];
+        const customerMessages = messages
+          .filter(msg => msg.message_type === 0)
+          .length;
+        
+        return customerMessages || 1;
       }
-      
-      // Count incoming messages since last outgoing message
-      return messages.slice(0, lastOutgoingIndex)
-        .filter(message => message.message_type === 0).length;
+
+      return 0;
     },
 
     inbox() {

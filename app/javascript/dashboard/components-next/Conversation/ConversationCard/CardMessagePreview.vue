@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, onMounted, inject } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 
@@ -12,6 +12,8 @@ const props = defineProps({
     required: true,
   },
 });
+
+const conversationMessages = inject('conversationMessages');
 
 const { t } = useI18n();
 
@@ -108,31 +110,31 @@ const isAutomatedAckMessage = (message) => {
   return false;
 };
 
-// Calculate the number of customer messages since last agent response
 const customerMessagesSinceResponse = computed(() => {
-  const { messages } = props.conversation;
-  if (!messages || !messages.length) {
-    return 0;
+  // Use cached message count if available
+  const cachedCount = conversationMessages.getMessageCount(props.conversation.id);
+  if (cachedCount !== undefined) {
+    return cachedCount;
   }
   
-  // Find the last meaningful outgoing message from the agent (non-automated)
-  const messageArray = [...messages].reverse();
-  const lastOutgoingIndex = messageArray.findIndex(message => {
-    // Consider a message outgoing only if it's:
-    // 1. message_type === 1 (outgoing)
-    // 2. NOT an automated ACK message
-    return message.message_type === 1 && !isAutomatedAckMessage(message);
-  });
-  
-  // If no outgoing message found, all messages are from customer
-  if (lastOutgoingIndex === -1) {
-    // Count only incoming messages
-    return messageArray.filter(message => message.message_type === 0).length;
+  // Fallback to metadata if messages not loaded yet
+  if (!props.conversation?.lastNonActivityMessage) return 0;
+  const lastMessage = props.conversation.lastNonActivityMessage;
+  const unreadCount = props.conversation.unreadCount || 0;
+
+  if (lastMessage.message_type === 'incoming') {
+    return unreadCount;
   }
-  
-  // Count incoming messages since last outgoing message
-  return messageArray.slice(0, lastOutgoingIndex)
-    .filter(message => message.message_type === 0).length;
+
+  if (lastMessage.message_type === 'outgoing' && lastMessage.content_attributes?.automated) {
+    return unreadCount;
+  }
+
+  return 0;
+});
+
+onMounted(() => {
+  // fetchMessages();
 });
 </script>
 
@@ -159,12 +161,9 @@ const customerMessagesSinceResponse = computed(() => {
         <!-- Messages Since Response Indicator (Blue) -->
         <div
           v-if="customerMessagesSinceResponse > 0"
-          class="inline-flex items-center justify-center rounded-full size-5 bg-n-blue-10"
-          :title="customerMessagesSinceResponse === 1 ? '1 message since your last response' : `${customerMessagesSinceResponse} messages since your last response`"
+          class="shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 mr-1 min-w-[1rem] px-1 py-0 text-center text-white bg-n-blue-10"
         >
-          <span class="text-xs font-semibold text-white">
-            {{ customerMessagesSinceResponse }}
-          </span>
+          {{ customerMessagesSinceResponse }}
         </div>
         <!-- Unread/Attention Indicator (Green) -->
         <div
