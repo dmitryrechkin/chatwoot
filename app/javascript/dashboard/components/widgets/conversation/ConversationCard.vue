@@ -118,6 +118,23 @@ export default {
       return this.chat.unread_count;
     },
 
+    shouldShowUnread() {
+      // Show unread indicator if there are unread messages according to backend
+      if (this.unreadCount > 0) {
+        return true;
+      }
+      
+      // Always show unread indicator if last message is incoming
+      // This ensures we mark conversations as "requiring attention" even after viewing
+      if (this.lastMessageInChat) {
+        // Message type 0 is incoming and we want to continue showing the indicator
+        // for incoming messages even after they've been seen but not replied to
+        return this.lastMessageInChat.message_type === 0;  
+      }
+      
+      return false;
+    },
+
     hasUnread() {
       return this.unreadCount > 0;
     },
@@ -345,10 +362,10 @@ export default {
           />
         </span>
         <span
-          v-if="unreadCount > 0"
-          class="unread shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 ml-auto mt-1 min-w-[1rem] px-1 py-0 text-center text-white bg-n-teal-9"
+          v-if="shouldShowUnread"
+          class="unread shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 ml-auto mt-1 min-w-[1rem] px-1 py-0 text-center text-white bg-red-500"
         >
-          {{ unreadCount > 9 ? '9+' : unreadCount }}
+          {{ unreadCount > 0 ? unreadCount : '!' }}
         </span>
       </div>
       <CardLabels :conversation-labels="chat.labels" class="mt-0.5 mx-2 mb-0">
