@@ -6,15 +6,20 @@ import {
   getLastMessage, 
   isAutomatedAckMessage, 
   getCustomerMessagesSinceResponse,
-  shouldShowUnread
+  shouldShowUnread as shouldShowUnreadHelper
 } from 'dashboard/helper/conversationHelper';
 
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
+import { dynamicTime, shortTimestamp } from 'shared/helpers/timeHelper';
 
 const props = defineProps({
   conversation: {
     type: Object,
+    required: true,
+  },
+  unreadCount: {
+    type: Number,
     required: true,
   },
 });
@@ -54,13 +59,10 @@ const assignee = computed(() => {
   };
 });
 
-const unreadMessagesCount = computed(() => {
-  const { unreadCount } = props.conversation;
-  return unreadCount;
-});
+const unreadMessagesCount = computed(() => props.unreadCount);
 
 const shouldShowUnread = computed(() => {
-  return shouldShowUnread(props.conversation, props.unreadCount);
+  return shouldShowUnreadHelper(props.conversation, props.unreadCount);
 });
 
 const customerMessagesSinceResponse = computed(() => {
