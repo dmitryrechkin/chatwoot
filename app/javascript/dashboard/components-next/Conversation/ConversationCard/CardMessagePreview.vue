@@ -110,7 +110,17 @@ const customerMessagesSinceResponse = computed(() => {
           :status="assignee.status"
           rounded-full
         />
-        <!-- Unread/Attention Indicator -->
+        <!-- Messages Since Response Indicator (Blue) -->
+        <div
+          v-if="customerMessagesSinceResponse > 0"
+          class="inline-flex items-center justify-center rounded-full size-5 bg-blue-600"
+          :title="customerMessagesSinceResponse === 1 ? '1 message since your last response' : `${customerMessagesSinceResponse} messages since your last response`"
+        >
+          <span class="text-xs font-semibold text-white">
+            {{ customerMessagesSinceResponse }}
+          </span>
+        </div>
+        <!-- Unread/Attention Indicator (Green) -->
         <div
           v-if="shouldShowUnread"
           class="inline-flex items-center justify-center rounded-full size-5 bg-green-500"
@@ -118,16 +128,6 @@ const customerMessagesSinceResponse = computed(() => {
         >
           <span class="text-xs font-semibold text-white">
             {{ unreadMessagesCount > 0 ? unreadMessagesCount : '!' }}
-          </span>
-        </div>
-        <!-- Messages Since Response Indicator -->
-        <div
-          v-if="customerMessagesSinceResponse > 0"
-          class="inline-flex items-center justify-center rounded-full size-5 bg-blue-500"
-          :title="customerMessagesSinceResponse === 1 ? '1 message since your last response' : `${customerMessagesSinceResponse} messages since your last response`"
-        >
-          <span class="text-xs font-semibold text-white">
-            {{ customerMessagesSinceResponse }}
           </span>
         </div>
       </div>

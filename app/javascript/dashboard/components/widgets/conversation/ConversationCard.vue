@@ -382,21 +382,21 @@ export default {
             :created-at-timestamp="chat.created_at"
           />
         </span>
-        <!-- Unread/Attention Indicator -->
+        <!-- Messages Since Response Indicator (Blue) -->
+        <span
+          v-if="customerMessagesSinceResponse > 0"
+          class="shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 mr-1 min-w-[1rem] px-1 py-0 text-center text-white bg-blue-600"
+          :title="customerMessagesSinceResponse === 1 ? '1 message since your last response' : `${customerMessagesSinceResponse} messages since your last response`"
+        >
+          {{ customerMessagesSinceResponse }}
+        </span>
+        <!-- Unread/Attention Indicator (Green) -->
         <span
           v-if="shouldShowUnread"
           class="unread shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 min-w-[1rem] px-1 py-0 text-center text-white bg-green-500"
           :title="unreadCount > 0 ? `${unreadCount} unread message${unreadCount > 1 ? 's' : ''}` : 'Needs attention'"
         >
           {{ unreadCount > 0 ? unreadCount : '!' }}
-        </span>
-        <!-- Messages Since Response Indicator -->
-        <span
-          v-if="customerMessagesSinceResponse > 0"
-          class="shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 ml-1 min-w-[1rem] px-1 py-0 text-center text-white bg-blue-500"
-          :title="customerMessagesSinceResponse === 1 ? '1 message since your last response' : `${customerMessagesSinceResponse} messages since your last response`"
-        >
-          {{ customerMessagesSinceResponse }}
         </span>
       </div>
       <CardLabels :conversation-labels="chat.labels" class="mt-0.5 mx-2 mb-0">
