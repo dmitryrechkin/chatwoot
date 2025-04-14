@@ -147,6 +147,27 @@ export default {
       return getLastMessage(this.chat);
     },
 
+    // Calculate the number of customer messages since last agent response
+    customerMessagesSinceResponse() {
+      if (!this.chat.messages || !this.chat.messages.length) {
+        return 0;
+      }
+      
+      // Find the last outgoing message from the agent
+      const messages = [...this.chat.messages].reverse();
+      const lastOutgoingIndex = messages.findIndex(message => message.message_type === 1); // 1 for outgoing
+      
+      // If no outgoing message found, all messages are from customer
+      if (lastOutgoingIndex === -1) {
+        // Count only incoming messages
+        return messages.filter(message => message.message_type === 0).length;
+      }
+      
+      // Count incoming messages since last outgoing message
+      return messages.slice(0, lastOutgoingIndex)
+        .filter(message => message.message_type === 0).length;
+    },
+
     inbox() {
       const { inbox_id: inboxId } = this.chat;
       const stateInbox = this.$store.getters['inboxes/getInbox'](inboxId);
@@ -363,9 +384,16 @@ export default {
         </span>
         <span
           v-if="shouldShowUnread"
-          class="unread shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 ml-auto mt-1 min-w-[1rem] px-1 py-0 text-center text-white bg-red-500"
+          class="unread shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 ml-auto mt-1 min-w-[1rem] px-1 py-0 text-center text-white bg-orange-500"
         >
           {{ unreadCount > 0 ? unreadCount : '!' }}
+        </span>
+        <span
+          v-if="customerMessagesSinceResponse > 0"
+          class="shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 ml-auto mt-1 min-w-[1rem] px-1 py-0 text-center text-white bg-blue-500"
+          :title="customerMessagesSinceResponse === 1 ? '1 message since your last response' : `${customerMessagesSinceResponse} messages since your last response`"
+        >
+          {{ customerMessagesSinceResponse }}
         </span>
       </div>
       <CardLabels :conversation-labels="chat.labels" class="mt-0.5 mx-2 mb-0">

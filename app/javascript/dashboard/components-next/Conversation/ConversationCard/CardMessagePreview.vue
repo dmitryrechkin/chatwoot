@@ -66,6 +66,28 @@ const shouldShowUnread = computed(() => {
   
   return false;
 });
+
+// Calculate the number of customer messages since last agent response
+const customerMessagesSinceResponse = computed(() => {
+  const { messages } = props.conversation;
+  if (!messages || !messages.length) {
+    return 0;
+  }
+  
+  // Find the last outgoing message from the agent
+  const messageArray = [...messages].reverse();
+  const lastOutgoingIndex = messageArray.findIndex(message => message.message_type === 1); // 1 for outgoing
+  
+  // If no outgoing message found, all messages are from customer
+  if (lastOutgoingIndex === -1) {
+    // Count only incoming messages
+    return messageArray.filter(message => message.message_type === 0).length;
+  }
+  
+  // Count incoming messages since last outgoing message
+  return messageArray.slice(0, lastOutgoingIndex)
+    .filter(message => message.message_type === 0).length;
+});
 </script>
 
 <template>
@@ -90,10 +112,19 @@ const shouldShowUnread = computed(() => {
         />
         <div
           v-if="shouldShowUnread"
-          class="inline-flex items-center justify-center rounded-full size-5 bg-red-500"
+          class="inline-flex items-center justify-center rounded-full size-5 bg-orange-500"
         >
           <span class="text-xs font-semibold text-white">
             {{ unreadMessagesCount > 0 ? unreadMessagesCount : '!' }}
+          </span>
+        </div>
+        <div
+          v-if="customerMessagesSinceResponse > 0"
+          class="inline-flex items-center justify-center rounded-full size-5 bg-blue-500 ml-1"
+          :title="customerMessagesSinceResponse === 1 ? '1 message since your last response' : `${customerMessagesSinceResponse} messages since your last response`"
+        >
+          <span class="text-xs font-semibold text-white">
+            {{ customerMessagesSinceResponse }}
           </span>
         </div>
       </div>
