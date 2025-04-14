@@ -100,7 +100,10 @@ export const getUnreadMessages = (messages, agentLastSeenAt) => {
  * @returns {boolean} - True if the message is automated, false otherwise
  */
 export const isAutomatedAckMessage = (message, conversation) => {
-  console.log('isAutomatedAckMessage called with:', { message, conversation });
+  console.log('isAutomatedAckMessage called with:', {
+    message: JSON.stringify(message, null, 2),
+    conversation: JSON.stringify(conversation, null, 2)
+  });
   
   if (!message) {
     console.log('No message provided, returning false');
@@ -129,13 +132,17 @@ export const isAutomatedAckMessage = (message, conversation) => {
   }
   
   // CASE 4: Messages sent immediately after conversation creation
+  // Only consider this for automated acknowledgments, not all outgoing messages
   if (conversation?.created_at && message.created_at) {
     const conversationCreationTime = new Date(conversation.created_at).getTime();
     const messageCreationTime = new Date(message.created_at).getTime();
     const timeDifference = messageCreationTime - conversationCreationTime;
     
-    if (timeDifference <= 5000 && message.message_type === 1) {
-      console.log('Message is automated (CASE 4): Sent within 5 seconds of conversation creation');
+    // Only mark as automated if it's an acknowledgment message sent quickly
+    if (timeDifference <= 5000 && 
+        message.message_type === 1 && 
+        message.content_attributes?.automated_acknowledgement === true) {
+      console.log('Message is automated (CASE 4): Automated acknowledgment sent within 5 seconds of conversation creation');
       return true;
     }
   }
@@ -151,10 +158,13 @@ export const isAutomatedAckMessage = (message, conversation) => {
  * @returns {number} - The count of customer messages since last human response
  */
 export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
-  console.log('getCustomerMessagesSinceResponse called with:', { conversation, unreadCount });
+  console.log('getCustomerMessagesSinceResponse called with:', {
+    conversation: JSON.stringify(conversation, null, 2),
+    unreadCount
+  });
   
   const lastMessage = getLastMessage(conversation);
-  console.log('Last message:', lastMessage);
+  console.log('Last message:', JSON.stringify(lastMessage, null, 2));
 
   // If last message is incoming, use unread count
   if (lastMessage.message_type === 0) {
@@ -166,7 +176,7 @@ export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
   if (isAutomatedAckMessage(lastMessage, conversation)) {
     console.log('Last message is automated, finding last non-automated message');
     const messages = conversation.messages || [];
-    console.log('Messages array:', messages);
+    console.log('Messages array:', JSON.stringify(messages, null, 2));
 
     // Find the last non-automated message
     let lastNonAutomatedMessage = null;
@@ -176,6 +186,8 @@ export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
         break;
       }
     }
+
+    console.log('Last non-automated message found:', JSON.stringify(lastNonAutomatedMessage, null, 2));
 
     // If we found a non-automated message and it's a human response, return 0
     if (lastNonAutomatedMessage && lastNonAutomatedMessage.message_type === 1) {
@@ -201,6 +213,7 @@ export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].message_type === 0) count++;
     }
+    console.log('Total incoming messages count:', count);
     return count;
   }
 
