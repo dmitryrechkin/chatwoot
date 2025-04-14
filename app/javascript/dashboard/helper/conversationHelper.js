@@ -237,7 +237,9 @@ export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
   let count = 0;
   console.log(`Counting customer messages after agent response at index ${lastNonAutomatedAgentIndex}`);
   
-  for (let i = lastNonAutomatedAgentIndex - 1; i >= 0; i--) {
+  // FIX: In Chatwoot, messages are ordered newest to oldest (descending order)
+  // So we need to count customer messages from index 0 to lastNonAutomatedAgentIndex
+  for (let i = 0; i < lastNonAutomatedAgentIndex; i++) {
     const message = messages[i];
     if (message.message_type === 0) {
       count++;
