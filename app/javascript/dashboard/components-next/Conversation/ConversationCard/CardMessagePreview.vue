@@ -57,12 +57,10 @@ const unreadMessagesCount = computed(() => {
       <Icon icon="mail" size="16" class="mr-1" />
       <span class="truncate">{{ emailSubject }}</span>
     </div>
-    <div class="flex items-center mb-0 text-xs text-n-slate-9">
-      <span>#{{ conversationId }}</span>
-    </div>
     <div class="flex items-end w-full gap-2 pb-1">
       <p class="w-full mb-0 text-sm leading-7 text-n-slate-12 line-clamp-2">
         {{ lastNonActivityMessageContent }}
+        <span class="text-xs text-n-slate-9"> #{{ conversationId }}</span>
       </p>
       <div class="flex items-center flex-shrink-0 gap-2 pb-2">
         <Avatar

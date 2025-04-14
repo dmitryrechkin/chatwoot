@@ -127,6 +127,11 @@ export default {
         FEATURE_FLAGS.LINEAR
       );
     },
+    emailSubject() {
+      const { customAttributes = {} } = this.chat;
+      const { email: { subject } = {} } = customAttributes;
+      return subject;
+    },
   },
 };
 </script>
@@ -161,7 +166,7 @@ export default {
               <span
                 class="text-base font-medium truncate leading-tight text-n-slate-12"
               >
-                {{ currentContact.name }}
+                {{ currentContact.name }} <span class="text-n-slate-9">#{{ currentChat.id }}</span>
               </span>
             </NextButton>
             <fluent-icon
@@ -171,6 +176,14 @@ export default {
               class="text-n-amber-10 my-0 mx-0 min-w-[14px]"
               icon="warning"
             />
+          </div>
+
+          <div
+            v-if="emailSubject"
+            class="flex items-center mb-0 text-sm font-medium text-n-brand"
+          >
+            <fluent-icon icon="mail" size="14" class="mr-1" />
+            <span class="truncate">{{ emailSubject }}</span>
           </div>
 
           <div
