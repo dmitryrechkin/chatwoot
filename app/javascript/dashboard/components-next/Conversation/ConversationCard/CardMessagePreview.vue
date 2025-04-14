@@ -113,10 +113,18 @@ const isAutomatedAckMessage = (message) => {
 const customerMessagesSinceResponse = computed(() => {
   const { messages = [] } = props.conversation;
   
+  console.log('All messages:', messages);
+  
   // Find the index of the last human agent response
   const lastHumanResponseIndex = [...messages].reverse().findIndex(
-    message => message.message_type === 1 && !isAutomatedAckMessage(message)
+    message => {
+      const isHumanResponse = message.message_type === 1 && !isAutomatedAckMessage(message);
+      console.log('Checking message:', message, 'isHumanResponse:', isHumanResponse);
+      return isHumanResponse;
+    }
   );
+  
+  console.log('Last human response index:', lastHumanResponseIndex);
   
   // If no human response found, return 0
   if (lastHumanResponseIndex === -1) {
@@ -125,11 +133,15 @@ const customerMessagesSinceResponse = computed(() => {
   
   // Get messages after the last human response
   const messagesSinceLastResponse = messages.slice(-lastHumanResponseIndex);
+  console.log('Messages since last response:', messagesSinceLastResponse);
   
   // Count incoming messages since last human response
-  return messagesSinceLastResponse.filter(
+  const count = messagesSinceLastResponse.filter(
     message => message.message_type === 0
   ).length;
+  
+  console.log('Final count:', count);
+  return count;
 });
 
 onMounted(() => {
