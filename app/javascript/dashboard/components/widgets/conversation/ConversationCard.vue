@@ -374,23 +374,26 @@ export default {
         </span>
       </p>
       <div
-        class="absolute flex flex-col conversation--meta ltr:right-4 rtl:left-4 top-4"
+        class="absolute flex flex-row items-center conversation--meta ltr:right-4 rtl:left-4 top-4"
       >
-        <span class="ml-auto font-normal leading-4 text-xxs">
+        <span class="ml-auto font-normal leading-4 text-xxs mr-1">
           <TimeAgo
             :last-activity-timestamp="chat.timestamp"
             :created-at-timestamp="chat.created_at"
           />
         </span>
+        <!-- Unread/Attention Indicator -->
         <span
           v-if="shouldShowUnread"
-          class="unread shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 ml-auto mt-1 min-w-[1rem] px-1 py-0 text-center text-white bg-orange-500"
+          class="unread shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 min-w-[1rem] px-1 py-0 text-center text-white bg-green-500"
+          :title="unreadCount > 0 ? `${unreadCount} unread message${unreadCount > 1 ? 's' : ''}` : 'Needs attention'"
         >
           {{ unreadCount > 0 ? unreadCount : '!' }}
         </span>
+        <!-- Messages Since Response Indicator -->
         <span
           v-if="customerMessagesSinceResponse > 0"
-          class="shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 ml-auto mt-1 min-w-[1rem] px-1 py-0 text-center text-white bg-blue-500"
+          class="shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 ml-1 min-w-[1rem] px-1 py-0 text-center text-white bg-blue-500"
           :title="customerMessagesSinceResponse === 1 ? '1 message since your last response' : `${customerMessagesSinceResponse} messages since your last response`"
         >
           {{ customerMessagesSinceResponse }}

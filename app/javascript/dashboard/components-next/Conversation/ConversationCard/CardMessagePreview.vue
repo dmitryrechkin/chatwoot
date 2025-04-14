@@ -102,7 +102,7 @@ const customerMessagesSinceResponse = computed(() => {
         {{ lastNonActivityMessageContent }}
         <span class="text-xs text-n-slate-9"> #{{ conversationId }}</span>
       </p>
-      <div class="flex items-center flex-shrink-0 gap-2 pb-2">
+      <div class="flex items-center flex-shrink-0 gap-1 pb-2">
         <Avatar
           :name="assignee.name"
           :src="assignee.thumbnail"
@@ -110,17 +110,20 @@ const customerMessagesSinceResponse = computed(() => {
           :status="assignee.status"
           rounded-full
         />
+        <!-- Unread/Attention Indicator -->
         <div
           v-if="shouldShowUnread"
-          class="inline-flex items-center justify-center rounded-full size-5 bg-orange-500"
+          class="inline-flex items-center justify-center rounded-full size-5 bg-green-500"
+          :title="unreadMessagesCount > 0 ? `${unreadMessagesCount} unread message${unreadMessagesCount > 1 ? 's' : ''}` : 'Needs attention'"
         >
           <span class="text-xs font-semibold text-white">
             {{ unreadMessagesCount > 0 ? unreadMessagesCount : '!' }}
           </span>
         </div>
+        <!-- Messages Since Response Indicator -->
         <div
           v-if="customerMessagesSinceResponse > 0"
-          class="inline-flex items-center justify-center rounded-full size-5 bg-blue-500 ml-1"
+          class="inline-flex items-center justify-center rounded-full size-5 bg-blue-500"
           :title="customerMessagesSinceResponse === 1 ? '1 message since your last response' : `${customerMessagesSinceResponse} messages since your last response`"
         >
           <span class="text-xs font-semibold text-white">
