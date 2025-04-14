@@ -188,89 +188,65 @@ export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
     return 0;
   }
 
-  // Find the last non-automated message
-  let lastNonAutomatedMessage = null;
-  let lastNonAutomatedIndex = -1;
+  // Find the last non-automated agent message
+  let lastNonAutomatedAgentMessage = null;
+  let lastNonAutomatedAgentIndex = -1;
   
-  console.log('Searching for last non-automated message in conversation:', conversation.id);
+  console.log('Searching for last non-automated agent message in conversation:', conversation.id);
   for (let i = messages.length - 1; i >= 0; i--) {
     const message = messages[i];
-    console.log(`Checking message at index ${i}:`, {
+    console.log(`Checking message ${i}:`, {
       id: message.id,
-      messageType: message.message_type,
-      content: message.content?.substring(0, 30) + (message.content?.length > 30 ? '...' : ''),
-      sender: message.sender?.name || message.sender_type
+      type: message.message_type,
+      sender: message.sender?.name || message.sender_type,
+      content: message.content?.substring(0, 30) + (message.content?.length > 30 ? '...' : '')
     });
     
-    const isAutomated = isAutomatedAckMessage(message, conversation);
-    console.log(`Message ${message.id} is${isAutomated ? '' : ' not'} automated`);
-    
-    if (!isAutomated) {
-      lastNonAutomatedMessage = message;
-      lastNonAutomatedIndex = i;
-      console.log('Found last non-automated message:', {
-        id: message.id,
-        messageType: message.message_type,
-        index: i,
-        content: message.content?.substring(0, 30) + (message.content?.length > 30 ? '...' : '')
-      });
-      break;
-    }
-  }
-
-  console.log('Last non-automated message search result:', lastNonAutomatedMessage ? {
-    id: lastNonAutomatedMessage.id,
-    index: lastNonAutomatedIndex,
-    messageType: lastNonAutomatedMessage.message_type,
-    content: lastNonAutomatedMessage.content?.substring(0, 30) + (lastNonAutomatedMessage.content?.length > 30 ? '...' : '')
-  } : 'None found');
-
-  // If no non-automated messages found, count all incoming messages
-  if (!lastNonAutomatedMessage) {
-    console.log('No non-automated messages found, counting all incoming messages');
-    const count = messages.filter(msg => msg.message_type === 0).length;
-    console.log('Total incoming messages count:', count);
-    return count;
-  }
-
-  // If last non-automated message is a human response, return 0
-  if (lastNonAutomatedMessage.message_type === 1) {
-    console.log('Last non-automated message is human response, returning 0');
-    return 0;
-  }
-
-  // If last non-automated message is from customer
-  if (lastNonAutomatedMessage.message_type === 0) {
-    console.log('Last non-automated message is from customer, counting all customer messages from the end');
-    
-    // Count all customer messages from the end, including the last one
-    let count = 0;
-    console.log('Counting customer messages until last agent response:');
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const message = messages[i];
-      console.log(`Examining message ${i}:`, {
-        id: message.id,
-        type: message.message_type,
-        isAutomated: isAutomatedAckMessage(message, conversation)
-      });
+    // Only consider agent messages (type 1)
+    if (message.message_type === 1) {
+      const isAutomated = isAutomatedAckMessage(message, conversation);
+      console.log(`Agent message ${message.id} is${isAutomated ? '' : ' not'} automated`);
       
-      if (message.message_type === 0) {
-        count++;
-        console.log(`Counting message ${message.id} at index ${i}, running count: ${count}`);
-      } else if (message.message_type === 1 && !isAutomatedAckMessage(message, conversation)) {
-        // Stop counting when we hit a non-automated agent message
-        console.log(`Found non-automated agent message at index ${i}, ID: ${message.id}, stopping count`);
+      if (!isAutomated) {
+        lastNonAutomatedAgentMessage = message;
+        lastNonAutomatedAgentIndex = i;
+        console.log('Found last non-automated agent message:', {
+          id: message.id,
+          index: i,
+          content: message.content?.substring(0, 30) + (message.content?.length > 30 ? '...' : '')
+        });
         break;
       }
     }
-    
-    console.log(`Final customer messages count for conversation ${conversation.id}: ${count}`);
+  }
+
+  console.log('Last non-automated agent message:', lastNonAutomatedAgentMessage ? {
+    id: lastNonAutomatedAgentMessage.id,
+    index: lastNonAutomatedAgentIndex
+  } : 'None found');
+
+  // If no non-automated agent messages found, count all customer messages
+  if (!lastNonAutomatedAgentMessage) {
+    console.log('No non-automated agent messages found, counting all customer messages');
+    const count = messages.filter(msg => msg.message_type === 0).length;
+    console.log(`Total customer messages count: ${count}`);
     return count;
   }
 
-  // Default case
-  console.log('Default case, returning 0');
-  return 0;
+  // Count all customer messages after the last non-automated agent message
+  let count = 0;
+  console.log(`Counting customer messages after agent response at index ${lastNonAutomatedAgentIndex}`);
+  
+  for (let i = lastNonAutomatedAgentIndex - 1; i >= 0; i--) {
+    const message = messages[i];
+    if (message.message_type === 0) {
+      count++;
+      console.log(`Counting message ${message.id} at index ${i}, running count: ${count}`);
+    }
+  }
+  
+  console.log(`Final customer messages count: ${count}`);
+  return count;
 };
 
 /**
