@@ -100,10 +100,7 @@ export const getUnreadMessages = (messages, agentLastSeenAt) => {
  * @returns {boolean} - True if the message is automated, false otherwise
  */
 export const isAutomatedAckMessage = (message, conversation) => {
-  console.log('isAutomatedAckMessage called with:', {
-    message: JSON.stringify(message, null, 2),
-    conversation: JSON.stringify(conversation, null, 2)
-  });
+  console.log('isAutomatedAckMessage called with message ID:', message?.id);
   
   if (!message) {
     console.log('No message provided, returning false');
@@ -114,20 +111,29 @@ export const isAutomatedAckMessage = (message, conversation) => {
   if (message.content_attributes && 
       (message.content_attributes.automation_rule_id || 
        message.content_attributes.automated === true)) {
-    console.log('Message is automated (CASE 1): Automation rule or automated flag found');
+    console.log('Message is automated (CASE 1): Automation rule or automated flag found', {
+      messageId: message.id,
+      content_attributes: message.content_attributes
+    });
     return true;
   }
   
   // CASE 2: Check campaign ID in additional_attributes
   if (message.additional_attributes && 
       message.additional_attributes.campaign_id) {
-    console.log('Message is automated (CASE 2): Campaign ID found');
+    console.log('Message is automated (CASE 2): Campaign ID found', {
+      messageId: message.id,
+      campaign_id: message.additional_attributes.campaign_id
+    });
     return true;
   }
   
   // CASE 3: Check sender type - messages from bots
   if (message.sender_type === 'AgentBot') {
-    console.log('Message is automated (CASE 3): AgentBot sender type');
+    console.log('Message is automated (CASE 3): AgentBot sender type', {
+      messageId: message.id,
+      sender_type: message.sender_type
+    });
     return true;
   }
   
@@ -142,12 +148,20 @@ export const isAutomatedAckMessage = (message, conversation) => {
     if (timeDifference <= 5000 && 
         message.message_type === 1 && 
         message.content_attributes?.automated_acknowledgement === true) {
-      console.log('Message is automated (CASE 4): Automated acknowledgment sent within 5 seconds of conversation creation');
+      console.log('Message is automated (CASE 4): Automated acknowledgment sent within 5 seconds of conversation creation', {
+        messageId: message.id,
+        timeDifference,
+        automated_acknowledgement: message.content_attributes?.automated_acknowledgement
+      });
       return true;
     }
   }
   
-  console.log('Message is not automated');
+  console.log('Message is not automated', {
+    messageId: message.id,
+    message_type: message.message_type,
+    sender_type: message.sender_type
+  });
   return false;
 };
 
@@ -159,12 +173,14 @@ export const isAutomatedAckMessage = (message, conversation) => {
  */
 export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
   console.log('getCustomerMessagesSinceResponse called with:', {
-    conversation: JSON.stringify(conversation, null, 2),
-    unreadCount
+    conversationId: conversation.id,
+    unreadCount,
+    hasMessages: !!conversation.messages,
+    messageCount: conversation.messages?.length || 0
   });
   
   const messages = conversation.messages || [];
-  console.log('Messages array:', JSON.stringify(messages, null, 2));
+  console.log(`Messages array for conversation ${conversation.id} has ${messages.length} messages`);
 
   // If no messages, return 0
   if (messages.length === 0) {
@@ -174,22 +190,45 @@ export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
 
   // Find the last non-automated message
   let lastNonAutomatedMessage = null;
+  let lastNonAutomatedIndex = -1;
+  
+  console.log('Searching for last non-automated message in conversation:', conversation.id);
   for (let i = messages.length - 1; i >= 0; i--) {
-    if (!isAutomatedAckMessage(messages[i], conversation)) {
-      lastNonAutomatedMessage = messages[i];
+    const message = messages[i];
+    console.log(`Checking message at index ${i}:`, {
+      id: message.id,
+      messageType: message.message_type,
+      content: message.content?.substring(0, 30) + (message.content?.length > 30 ? '...' : ''),
+      sender: message.sender?.name || message.sender_type
+    });
+    
+    const isAutomated = isAutomatedAckMessage(message, conversation);
+    console.log(`Message ${message.id} is${isAutomated ? '' : ' not'} automated`);
+    
+    if (!isAutomated) {
+      lastNonAutomatedMessage = message;
+      lastNonAutomatedIndex = i;
+      console.log('Found last non-automated message:', {
+        id: message.id,
+        messageType: message.message_type,
+        index: i,
+        content: message.content?.substring(0, 30) + (message.content?.length > 30 ? '...' : '')
+      });
       break;
     }
   }
 
-  console.log('Last non-automated message found:', JSON.stringify(lastNonAutomatedMessage, null, 2));
+  console.log('Last non-automated message search result:', lastNonAutomatedMessage ? {
+    id: lastNonAutomatedMessage.id,
+    index: lastNonAutomatedIndex,
+    messageType: lastNonAutomatedMessage.message_type,
+    content: lastNonAutomatedMessage.content?.substring(0, 30) + (lastNonAutomatedMessage.content?.length > 30 ? '...' : '')
+  } : 'None found');
 
   // If no non-automated messages found, count all incoming messages
   if (!lastNonAutomatedMessage) {
     console.log('No non-automated messages found, counting all incoming messages');
-    let count = 0;
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].message_type === 0) count++;
-    }
+    const count = messages.filter(msg => msg.message_type === 0).length;
     console.log('Total incoming messages count:', count);
     return count;
   }
@@ -200,15 +239,32 @@ export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
     return 0;
   }
 
-  // If last non-automated message is incoming, count messages after it
+  // If last non-automated message is from customer
   if (lastNonAutomatedMessage.message_type === 0) {
-    console.log('Last non-automated message is incoming, counting messages after it');
+    console.log('Last non-automated message is from customer, counting all customer messages from the end');
+    
+    // Count all customer messages from the end, including the last one
     let count = 0;
+    console.log('Counting customer messages until last agent response:');
     for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].id === lastNonAutomatedMessage.id) break;
-      if (messages[i].message_type === 0) count++;
+      const message = messages[i];
+      console.log(`Examining message ${i}:`, {
+        id: message.id,
+        type: message.message_type,
+        isAutomated: isAutomatedAckMessage(message, conversation)
+      });
+      
+      if (message.message_type === 0) {
+        count++;
+        console.log(`Counting message ${message.id} at index ${i}, running count: ${count}`);
+      } else if (message.message_type === 1 && !isAutomatedAckMessage(message, conversation)) {
+        // Stop counting when we hit a non-automated agent message
+        console.log(`Found non-automated agent message at index ${i}, ID: ${message.id}, stopping count`);
+        break;
+      }
     }
-    console.log('Counted messages after last non-automated message:', count);
+    
+    console.log(`Final customer messages count for conversation ${conversation.id}: ${count}`);
     return count;
   }
 

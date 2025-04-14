@@ -66,7 +66,17 @@ const shouldShowUnread = computed(() => {
 });
 
 const customerMessagesSinceResponse = computed(() => {
-  return getCustomerMessagesSinceResponse(props.conversation, props.unreadCount);
+  console.log('CardMessagePreview - customerMessagesSinceResponse called for conversation:', props.conversation.id);
+  console.log('Conversation object:', {
+    id: props.conversation.id,
+    unreadCount: props.unreadCount,
+    hasMessages: !!props.conversation.messages,
+    messageCount: props.conversation.messages?.length || 0
+  });
+  
+  const count = getCustomerMessagesSinceResponse(props.conversation, props.unreadCount);
+  console.log('CardMessagePreview - customerMessagesSinceResponse result:', count);
+  return count;
 });
 
 onMounted(() => {
