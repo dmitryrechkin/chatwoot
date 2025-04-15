@@ -179,6 +179,12 @@ export const getCustomerMessagesSinceResponse = (conversation) => {
     return 0;
   }
   
+  console.log('DEBUG - Conversation:', JSON.stringify(conversation, null, 2));
+
+  const lastMessage = getLastMessage(conversation);
+
+  console.log('DEBUG - Last message:', JSON.stringify(lastMessage, null, 2));
+
   // Check if messages array exists and has content
   if (!conversation.messages || conversation.messages.length === 0) {
     console.log('DEBUG - No messages in conversation, using fallbacks');
@@ -199,8 +205,6 @@ export const getCustomerMessagesSinceResponse = (conversation) => {
     
     return 0;
   }
-  
-  console.log('DEBUG - Conversation messages:', JSON.stringify(conversation.messages, null, 2) );
 
   console.log('DEBUG - Processing messages array with', conversation.messages.length, 'messages');
   
