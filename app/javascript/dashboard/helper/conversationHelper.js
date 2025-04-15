@@ -179,6 +179,8 @@ export const getCustomerMessagesSinceResponse = (conversation) => {
     return 0;
   }
   
+  console.log('DEBUG - Conversation:', JSON.stringify(conversation, null, 2));
+
   // Check if we have a last_non_activity_message - this is what Chatwoot provides by default
   const lastNonActivityMessage = conversation.last_non_activity_message;
   
