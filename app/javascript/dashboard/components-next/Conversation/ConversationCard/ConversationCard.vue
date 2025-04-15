@@ -99,6 +99,23 @@ const isLoading = ref(false);
 const batchSize = 10;
 const messageCache = new Map(); // Cache for computed results
 
+// Add a watcher for the conversation's messages
+watch(() => props.conversation?.messages, (newMessages, oldMessages) => {
+  console.log('🔵 [NEXT VERSION] Conversation messages changed:', {
+    id: props.conversation?.id,
+    hasMessages: !!newMessages,
+    messageCount: newMessages?.length || 0,
+    oldMessageCount: oldMessages?.length || 0
+  });
+
+  // If messages are provided via props, update our local cache
+  if (newMessages && newMessages.length > 0) {
+    console.log(`🔵 [NEXT VERSION] Auto-updating messages for conversation ${props.conversation.id} from props`);
+    messages.value[props.conversation.id] = newMessages;
+    messageCache.delete(props.conversation.id);
+  }
+}, { immediate: true });
+
 // Simple debounce implementation
 const debounce = (fn, delay) => {
   let timeoutId;
@@ -200,6 +217,38 @@ const setupIntersectionObserver = () => {
 
 onMounted(() => {
   console.log('🔵 [NEXT VERSION] ConversationCard component mounted');
+  console.log('🔵 [NEXT VERSION] Initial conversation data:', {
+    id: props.conversation?.id,
+    hasMessages: !!props.conversation?.messages,
+    messageCount: props.conversation?.messages?.length || 0,
+    hasLastMessage: !!props.conversation?.last_non_activity_message,
+    messagesFromStore: !!messages.value[props.conversation?.id]
+  });
+  
+  // FORCE IMMEDIATE MESSAGE LOADING
+  if (props.conversation && props.conversation.id) {
+    console.log(`🔵 [NEXT VERSION] FORCING immediate message load for conversation ${props.conversation.id}`);
+    try {
+      axios.post('/api/v1/conversations/batch_messages', {
+        conversation_ids: [props.conversation.id]
+      }).then(response => {
+        console.log(`🔵 [NEXT VERSION] Forced load successful for ${props.conversation.id}`);
+        if (response.data && response.data.length > 0) {
+          response.data.forEach(conversationData => {
+            console.log(`🔵 [NEXT VERSION] Loaded ${conversationData.messages?.length || 0} messages for conversation ${conversationData.conversation_id}`);
+            messages.value[conversationData.conversation_id] = conversationData.messages;
+          });
+          // Force reactivity
+          messages.value = { ...messages.value };
+        }
+      }).catch(err => {
+        console.error('🔵 [NEXT VERSION] Error in forced message loading:', err);
+      });
+    } catch (error) {
+      console.error('🔵 [NEXT VERSION] Exception in forced message loading:', error);
+    }
+  }
+  
   const observer = setupIntersectionObserver();
   
   // Apply observer to conversation elements
@@ -265,6 +314,7 @@ provide('conversationMessages', {
     class="flex w-full gap-3 px-3 py-4 transition-all duration-300 ease-in-out cursor-pointer"
     @click="onCardClick"
     :data-conversation-id="conversation.id"
+    :id="`conversation-card-${conversation.id}`"
   >
     <Avatar
       :name="currentContactName"
