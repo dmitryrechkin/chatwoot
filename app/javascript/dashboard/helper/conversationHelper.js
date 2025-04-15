@@ -185,33 +185,14 @@ export const getCustomerMessagesSinceResponse = (conversation) => {
 
   console.log('DEBUG - Last message:', JSON.stringify(lastMessage, null, 2));
 
-  // Check if messages array exists and has content
-  if (!conversation.messages || conversation.messages.length === 0) {
-    console.log('DEBUG - No messages in conversation, using fallbacks');
-    
-    // Use last_non_activity_message as fallback
-    const lastNonActivityMessage = conversation.last_non_activity_message;
-    // If last message is from a customer, return that we have 1 new message
-    if (lastNonActivityMessage && lastNonActivityMessage.message_type === 0) {
-      console.log('DEBUG - Last non-activity message is from customer, showing indicator');
-      return 1;
-    }
-    
-    // Use unread_count as last fallback
-    if (conversation.unread_count > 0) {
-      console.log('DEBUG - Showing indicator based on unread_count:', conversation.unread_count);
-      return conversation.unread_count;
-    }
-    
-    return 0;
-  }
+  const messages = conversation?.meta?.messages || [];
 
-  console.log('DEBUG - Processing messages array with', conversation.messages.length, 'messages');
+  console.log('DEBUG - Processing messages array with', messages.length, 'messages');
   
   let customerMessageCount = 0;
   
   // Loop through messages (newest to oldest)
-  for (const message of conversation.messages) {
+  for (const message of messages) {
     // Customer/Incoming message (message_type === 0)
     if (message.message_type === 0) {
       customerMessageCount++;
