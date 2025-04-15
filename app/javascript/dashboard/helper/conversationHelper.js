@@ -186,6 +186,8 @@ export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
     hasMessages: !!conversation.messages,
     messageCount: conversation.messages?.length || 0
   }, null, 2));
+
+  console.log('DEBUG - Conversation messages:', JSON.stringify(conversation.messages, null, 2));
   
   // First, check if there's unread count from the backend
   // If there is, we can use that as a fallback
@@ -193,10 +195,12 @@ export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
                      (conversation.messages && conversation.messages.length > 0 ? 
                       conversation.messages[0] : null);
   
+  console.log('DEBUG - Last message:', JSON.stringify(lastMessage, null, 2));
+
   // If we have unread messages and the last message is from customer, use unread count
   if (unreadCount > 0 && lastMessage && lastMessage.message_type === 0) {
     console.log(`DEBUG - Using unread count ${unreadCount} as fallback since last message is from customer`);
-    return unreadCount;
+    return unreadCount; // TODO: I don't think we need to fallback to unread count here, if everything works it is not needed
   }
   
   // Look for the last_non_activity_message if messages aren't loaded yet
