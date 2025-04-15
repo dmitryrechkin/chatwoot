@@ -181,11 +181,31 @@ export const getCustomerMessagesSinceResponse = (conversation) => {
   
   console.log('DEBUG - Conversation:', JSON.stringify(conversation, null, 2));
 
-  const lastMessage = getLastMessage(conversation);
-
-  console.log('DEBUG - Last message:', JSON.stringify(lastMessage, null, 2));
-
   const messages = conversation.messages.filter(message => message.message_type < 2);
+
+  // If there are no messages, fallback to last non-activity message
+  if (messages.length === 0) {
+    console.log('DEBUG - Fallback to last message');
+
+    const lastMessage = getLastMessage(conversation);
+
+    console.log('DEBUG - Last non-activity message:', JSON.stringify(lastMessage, null, 2));
+  
+    // Customer/Incoming message (message_type === 0)
+    if (lastMessage.message_type === 0) {
+      console.log('DEBUG - Last message is an activity message, returning 0');
+      return 1;
+    }
+
+    // Otherwise it will be outgoing message
+    const isAutomated = isAutomatedAckMessage(lastMessage, conversation);
+    if (!isAutomated) {
+      console.log('DEBUG - Last message is not automated, returning 1');
+      return 1;
+    }
+  
+    return 0;
+  }
 
   console.log('DEBUG - Processing messages array with', messages.length, 'messages');
   
