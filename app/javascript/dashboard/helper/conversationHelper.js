@@ -111,29 +111,29 @@ export const isAutomatedAckMessage = (message, conversation) => {
   if (message.content_attributes && 
       (message.content_attributes.automation_rule_id || 
        message.content_attributes.automated === true)) {
-    console.log('Message is automated (CASE 1): Automation rule or automated flag found', {
+    console.log('Message is automated (CASE 1): Automation rule or automated flag found', JSON.stringify({
       messageId: message.id,
       content_attributes: message.content_attributes
-    });
+    }, null, 2));
     return true;
   }
   
   // CASE 2: Check campaign ID in additional_attributes
   if (message.additional_attributes && 
       message.additional_attributes.campaign_id) {
-    console.log('Message is automated (CASE 2): Campaign ID found', {
+    console.log('Message is automated (CASE 2): Campaign ID found', JSON.stringify({
       messageId: message.id,
       campaign_id: message.additional_attributes.campaign_id
-    });
+    }, null, 2));
     return true;
   }
   
   // CASE 3: Check sender type - messages from bots
   if (message.sender_type === 'AgentBot') {
-    console.log('Message is automated (CASE 3): AgentBot sender type', {
+    console.log('Message is automated (CASE 3): AgentBot sender type', JSON.stringify({
       messageId: message.id,
       sender_type: message.sender_type
-    });
+    }, null, 2));
     return true;
   }
   
@@ -148,11 +148,11 @@ export const isAutomatedAckMessage = (message, conversation) => {
     if (timeDifference <= 5000 && 
         message.message_type === 1 && 
         message.content_attributes?.automated_acknowledgement === true) {
-      console.log('Message is automated (CASE 4): Automated acknowledgment sent within 5 seconds of conversation creation', {
+      console.log('Message is automated (CASE 4): Automated acknowledgment sent within 5 seconds of conversation creation', JSON.stringify({
         messageId: message.id,
         timeDifference,
         automated_acknowledgement: message.content_attributes?.automated_acknowledgement
-      });
+      }, null, 2));
       return true;
     }
   }
@@ -206,11 +206,11 @@ export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
     // we can use it to determine if it's a customer message
     if (conversation.last_non_activity_message) {
       const lastMsg = conversation.last_non_activity_message;
-      console.log('DEBUG - Last non-activity message:', {
+      console.log('DEBUG - Last non-activity message:', JSON.stringify({
         id: lastMsg.id,
         type: lastMsg.message_type,
         isCustomer: lastMsg.message_type === 0
-      });
+      }, null, 2));
       
       // If the last message is from a customer, count it as 1 unresponded message
       if (lastMsg.message_type === 0) {
