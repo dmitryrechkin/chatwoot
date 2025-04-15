@@ -174,7 +174,7 @@ export const getCustomerMessagesSinceResponse = (conversation) => {
   console.log('DEBUG - getCustomerMessagesSinceResponse called for:', conversation?.id);
   
   // If conversation doesn't exist or id is not available, return 0
-  if (!conversation || !conversation.id) {
+  if (!conversation || !conversation.messages) {
     console.log('DEBUG - Invalid conversation object');
     return 0;
   }
@@ -185,14 +185,14 @@ export const getCustomerMessagesSinceResponse = (conversation) => {
 
   console.log('DEBUG - Last message:', JSON.stringify(lastMessage, null, 2));
 
-  const messages = conversation?.meta?.messages || [];
+  const messages = conversation.messages;
 
   console.log('DEBUG - Processing messages array with', messages.length, 'messages');
   
   let customerMessageCount = 0;
   
-  // Loop through messages (newest to oldest)
-  for (const message of messages) {
+  // Loop through messages (oldest to newest)
+  messages.forEach(message => {
     // Customer/Incoming message (message_type === 0)
     if (message.message_type === 0) {
       customerMessageCount++;
@@ -210,7 +210,7 @@ export const getCustomerMessagesSinceResponse = (conversation) => {
         console.log('DEBUG - Skipping automated agent message');
       }
     }
-  }
+  });
   
   console.log('DEBUG - Final count of customer messages since last human response:', customerMessageCount);
   return customerMessageCount;
