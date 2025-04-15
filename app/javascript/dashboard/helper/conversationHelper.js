@@ -157,11 +157,11 @@ export const isAutomatedAckMessage = (message, conversation) => {
     }
   }
   
-  console.log('Message is not automated', {
+  console.log('Message is not automated', JSON.stringify({
     messageId: message.id,
     message_type: message.message_type,
     sender_type: message.sender_type
-  });
+  }, null, 2));
   return false;
 };
 
@@ -180,12 +180,12 @@ export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
     return 0;
   }
   
-  console.log('DEBUG - Conversation state:', {
+  console.log('DEBUG - Conversation state:', JSON.stringify({
     id: conversation.id,
     hasLastNonActivityMessage: !!conversation.last_non_activity_message,
     hasMessages: !!conversation.messages,
     messageCount: conversation.messages?.length || 0
-  });
+  }, null, 2));
   
   // First, check if there's unread count from the backend
   // If there is, we can use that as a fallback
@@ -310,7 +310,7 @@ export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
  * @returns {boolean} - True if the unread indicator should be shown
  */
 export const shouldShowUnread = (conversation, unreadCount) => {
-  console.log('shouldShowUnread called with:', { conversation, unreadCount });
+  console.log('shouldShowUnread called with:', JSON.stringify({ conversation, unreadCount }, null, 2));
   
   // Show unread indicator if there are unread messages according to backend
   if (unreadCount > 0) {
@@ -320,7 +320,7 @@ export const shouldShowUnread = (conversation, unreadCount) => {
   
   // Always show unread indicator if last message is incoming
   const lastMessage = getLastMessage(conversation);
-  console.log('Last message:', lastMessage);
+  console.log('Last message:', JSON.stringify(lastMessage, null, 2));
   
   if (lastMessage) {
     const shouldShow = lastMessage.message_type === 0;
