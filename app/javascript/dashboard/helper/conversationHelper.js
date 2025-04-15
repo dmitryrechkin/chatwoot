@@ -314,24 +314,24 @@ export const getCustomerMessagesSinceResponse = (conversation, unreadCount) => {
  * @returns {boolean} - True if the unread indicator should be shown
  */
 export const shouldShowUnread = (conversation, unreadCount) => {
-  console.log('shouldShowUnread called with:', JSON.stringify({ conversation, unreadCount }, null, 2));
+  //console.log('shouldShowUnread called with:', JSON.stringify({ conversation, unreadCount }, null, 2));
   
   // Show unread indicator if there are unread messages according to backend
   if (unreadCount > 0) {
-    console.log('Unread count > 0, returning true');
+    //console.log('Unread count > 0, returning true');
     return true;
   }
   
   // Always show unread indicator if last message is incoming
   const lastMessage = getLastMessage(conversation);
-  console.log('Last message:', JSON.stringify(lastMessage, null, 2));
+  //console.log('Last message:', JSON.stringify(lastMessage, null, 2));
   
   if (lastMessage) {
     const shouldShow = lastMessage.message_type === 0;
-    console.log('Last message is incoming:', shouldShow);
+    //console.log('Last message is incoming:', shouldShow);
     return shouldShow;
   }
   
-  console.log('No last message found, returning false');
+  //console.log('No last message found, returning false');
   return false;
 };
