@@ -68,20 +68,18 @@ const shouldShowUnread = computed(() => {
 const customerMessagesSinceResponse = computed(() => {
   console.log('CardMessagePreview - computing customerMessagesSinceResponse for:', props.conversation.id);
   
-  // Simply use the getCustomerMessagesSinceResponse function which now relies on last_non_activity_message
+  // Directly call the helper function - we've updated it to handle all edge cases
   const count = getCustomerMessagesSinceResponse(props.conversation);
   console.log('CardMessagePreview - computed count:', count);
   return count;
 });
 
 onMounted(() => {
-  console.log('MessagePreview component mounted');
-  console.log('Conversation ID:', props.conversation.id);
-  console.log('lastNonActivityMessage:', 
+  console.log('MessagePreview component mounted for conversation:', props.conversation.id);
+  console.log('Last non-activity message:', 
     props.conversation.last_non_activity_message ? 
     `ID: ${props.conversation.last_non_activity_message.id}, Type: ${props.conversation.last_non_activity_message.message_type}` : 
     'None');
-  console.log('unreadCount:', props.unreadCount);
 });
 </script>
 

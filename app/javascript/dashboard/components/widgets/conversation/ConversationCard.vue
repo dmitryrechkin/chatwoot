@@ -141,7 +141,24 @@ export default {
 
     // Calculate the number of customer messages since last agent response
     customerMessagesSinceResponse() {
-      return getCustomerMessagesSinceResponse(this.chat, this.unreadCount);
+      console.log('🔴 [LEGACY VERSION] Computing customerMessagesSinceResponse for:', this.chat?.id);
+
+      if (!this.chat) {
+        console.log('🔴 [LEGACY VERSION] No chat object');
+        return 0;
+      }
+
+      const count = getCustomerMessagesSinceResponse(this.chat);
+      
+      console.log('🔴 [LEGACY VERSION] Result:', {
+        chatId: this.chat.id,
+        hasLastNonActivityMessage: !!this.chat.last_non_activity_message,
+        lastMessageType: this.chat.last_non_activity_message?.message_type,
+        unreadCount: this.chat.unread_count,
+        count
+      });
+      
+      return count;
     },
 
     inbox() {
@@ -164,6 +181,20 @@ export default {
     hasSlaPolicyId() {
       return this.chat?.sla_policy_id;
     },
+  },
+  watch: {
+    chat: {
+      handler(newChat) {
+        console.log('🔴 [LEGACY VERSION] Chat object updated:', {
+          id: newChat.id,
+          hasLastNonActivityMessage: !!newChat.last_non_activity_message,
+          lastMessageType: newChat.last_non_activity_message?.message_type,
+          unreadCount: newChat.unread_count
+        });
+        // The watch function triggers reactivity updates
+      },
+      deep: true
+    }
   },
   methods: {
     isAutomatedAckMessage(message) {

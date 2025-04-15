@@ -185,8 +185,10 @@ export const getCustomerMessagesSinceResponse = (conversation) => {
   const lastNonActivityMessage = conversation.last_non_activity_message;
   
   if (lastNonActivityMessage) {
-    // If last message is from a customer, show the indicator (1 message without response)
-    if (lastNonActivityMessage.message_type === 0) {
+    // If last message is from a customer, show the indicator
+    const isLastMessageFromCustomer = lastNonActivityMessage.message_type === 0;
+    
+    if (isLastMessageFromCustomer) {
       console.log('DEBUG - Last non-activity message is from customer, showing indicator');
       return 1;
     }
@@ -195,13 +197,13 @@ export const getCustomerMessagesSinceResponse = (conversation) => {
     if (lastNonActivityMessage.message_type === 1) {
       const isAutomated = isAutomatedAckMessage(lastNonActivityMessage);
       
-      // If it's an automated message, show indicator as customers need real response
+      // If it's an automated message, then it means that we still need to respond to the customer
       if (isAutomated) {
         console.log('DEBUG - Last non-activity message is automated agent message, showing indicator');
         return 1;
       }
       
-      // If it's a real agent message, no need for indicator
+      // If it's a real agent message, no customer messages need response
       console.log('DEBUG - Last non-activity message is human agent message, not showing indicator');
       return 0;
     }
@@ -219,17 +221,18 @@ export const getCustomerMessagesSinceResponse = (conversation) => {
  * @returns {boolean} - True if the unread indicator should be shown
  */
 export const shouldShowUnread = (conversation, unreadCount) => {
-  // Show unread indicator if there are unread messages according to backend
+  // Show unread indicator if there are unread messages according to parameters or the conversation
   if (unreadCount > 0 || (conversation && conversation.unread_count > 0)) {
     return true;
   }
   
-  // If we have a last_non_activity_message, use that to determine if indicator needed
+  // If we don't have unread count, check the last message
   if (conversation && conversation.last_non_activity_message) {
-    // Show indicator if last message is from customer
-    return conversation.last_non_activity_message.message_type === 0;
+    const lastMessage = conversation.last_non_activity_message;
+    // Show indicator if last message is from customer (message_type === 0)
+    return lastMessage.message_type === 0;
   }
   
-  // Default to false if we can't determine
+  // Default to false if we have no information
   return false;
 };

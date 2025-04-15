@@ -1,16 +1,10 @@
 <script setup>
-import { computed, ref, onMounted, watch, provide } from 'vue';
+import { computed, ref, onMounted, provide, onUnmounted, watch } from 'vue';
 import { getInboxIconByType } from 'dashboard/helper/inbox';
 import { useRouter, useRoute } from 'vue-router';
 import { frontendURL, conversationUrl } from 'dashboard/helper/URLHelper.js';
 import { dynamicTime, shortTimestamp } from 'shared/helpers/timeHelper';
-import axios from 'axios';
-import { 
-  getLastMessage, 
-  isAutomatedAckMessage, 
-  getCustomerMessagesSinceResponse,
-  shouldShowUnread
-} from 'dashboard/helper/conversationHelper';
+import { useStore } from 'vuex';
 
 import Icon from 'dashboard/components-next/icon/Icon.vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
@@ -21,7 +15,7 @@ import CardPriorityIcon from './CardPriorityIcon.vue';
 const props = defineProps({
   conversation: {
     type: Object,
-    required: true,
+    default: null,
   },
   contact: {
     type: Object,
@@ -38,6 +32,14 @@ const props = defineProps({
   conversations: {
     type: Array,
     required: true,
+  },
+  hideLabels: {
+    type: Boolean,
+    default: false,
+  },
+  active: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -96,273 +98,54 @@ const onCardClick = e => {
 
 const messages = ref({});
 const isLoading = ref(false);
-const batchSize = 10;
 const messageCache = new Map(); // Cache for computed results
 
-// Add a watcher for the conversation's messages
-watch(() => props.conversation?.messages, (newMessages, oldMessages) => {
-  console.log('🔵 [NEXT VERSION] Conversation messages changed:', {
-    id: props.conversation?.id,
-    hasMessages: !!newMessages,
-    messageCount: newMessages?.length || 0,
-    oldMessageCount: oldMessages?.length || 0
-  });
-
-  // If messages are provided via props, update our local cache
-  if (newMessages && newMessages.length > 0) {
-    console.log(`🔵 [NEXT VERSION] Auto-updating messages for conversation ${props.conversation.id} from props`);
-    messages.value[props.conversation.id] = newMessages;
-    messageCache.delete(props.conversation.id);
-  }
-}, { immediate: true });
-
-// Simple debounce implementation
-const debounce = (fn, delay) => {
-  let timeoutId;
-  return (...args) => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-    timeoutId = setTimeout(() => {
-      fn(...args);
-    }, delay);
-  };
-};
-
-const fetchMessagesForBatch = debounce(async (conversationIds) => {
-  console.log('🔵 [NEXT VERSION] fetchMessagesForBatch called for:', conversationIds);
-  
-  if (!conversationIds || conversationIds.length === 0) {
-    console.log('🔵 [NEXT VERSION] No conversation IDs provided');
-    return;
-  }
-  
-  if (isLoading.value) {
-    console.log('🔵 [NEXT VERSION] Skipping batch fetch - already loading');
-    return;
-  }
-  
-  try {
-    isLoading.value = true;
-    const response = await axios.post('/api/v1/conversations/batch_messages', {
-      conversation_ids: conversationIds
-    });
-    
-    if (!response.data || !Array.isArray(response.data)) {
-      console.error('🔵 [NEXT VERSION] Received invalid response from batch_messages API:', response);
-      return;
-    }
-    
-    console.log(`🔵 [NEXT VERSION] Received batch messages for ${response.data.length} conversations`);
-    
-    if (response.data.length === 0) {
-      console.log('🔵 [NEXT VERSION] No messages found for requested conversations');
-      return;
-    }
-    
-    // Process each conversation's messages
-    response.data.forEach(conversationData => {
-      if (!conversationData || !conversationData.conversation_id) {
-        console.error('🔵 [NEXT VERSION] Invalid conversation data in response:', conversationData);
-        return;
-      }
-      
-      const convoId = conversationData.conversation_id;
-      console.log(`🔵 [NEXT VERSION] Processing messages for conversation ${convoId}: ${conversationData.messages?.length || 0} messages`);
-      
-      if (!conversationData.messages || !Array.isArray(conversationData.messages)) {
-        console.error('🔵 [NEXT VERSION] Missing or invalid messages array for conversation:', convoId);
-        return;
-      }
-      
-      // Store the messages in our local ref
-      messages.value[convoId] = conversationData.messages;
-      
-      // Clear cache when new messages arrive
-      messageCache.delete(convoId);
-      
-      // MORE AGGRESSIVE APPROACH: Update ALL matching conversations in props.conversations
-      // Find all conversations with this ID in the conversations array
-      const matchingConvos = props.conversations.filter(c => c.id === parseInt(convoId) || c.id === convoId);
-      if (matchingConvos.length > 0) {
-        console.log(`🔵 [NEXT VERSION] Updating ${matchingConvos.length} conversation objects with ID ${convoId}`);
-        matchingConvos.forEach(convo => {
-          // Update messages and add a flag indicating messages are loaded
-          convo.messages = conversationData.messages;
-          convo.allMessagesLoaded = true;
-        });
-      } else {
-        console.log(`🔵 [NEXT VERSION] No matching conversations found for ID ${convoId} in props`);
-      }
-      
-      // Update current conversation if it matches
-      if (props.conversation && (props.conversation.id === parseInt(convoId) || props.conversation.id === convoId)) {
-        console.log(`🔵 [NEXT VERSION] Updating current conversation ${convoId} directly`);
-        props.conversation.messages = conversationData.messages;
-        props.conversation.allMessagesLoaded = true;
-      }
-    });
-    
-    // Force a reactivity update by recreating the messages object
-    messages.value = { ...messages.value };
-    
-    console.log('🔵 [NEXT VERSION] Batch message loading complete');
-  } catch (error) {
-    console.error('🔵 [NEXT VERSION] Error fetching batch messages:', error);
-    // If there was an API error, try individual fetch for conversations 
-    if (conversationIds.length > 1) {
-      console.log('🔵 [NEXT VERSION] Attempting individual fetch for each conversation');
-      conversationIds.forEach(id => {
-        setTimeout(() => {
-          fetchMessagesForBatch([id]);
-        }, 100);
-      });
-    }
-  } finally {
-    isLoading.value = false;
-  }
-}, 100); // Reduce debounce to 100ms to load faster
-
-// Priority loading for conversations with unread messages
-const loadVisibleMessages = () => {
-  console.log('🔵 [NEXT VERSION] loadVisibleMessages called for ConversationCard');
-  
-  // Load ALL conversations without any batching
-  const conversationsToLoad = props.conversations.map(conv => conv.id);
-    
-  console.log(`🔵 [NEXT VERSION] Loading ALL conversations immediately: ${conversationsToLoad.length} conversations`);
-  
-  if (conversationsToLoad.length > 0) {
-    // Split into batches of 30 to avoid overwhelming the API
-    const batches = [];
-    for (let i = 0; i < conversationsToLoad.length; i += 30) {
-      batches.push(conversationsToLoad.slice(i, i + 30));
-    }
-    
-    console.log(`🔵 [NEXT VERSION] Split into ${batches.length} batches for loading`);
-    
-    // Load each batch with a small delay between batches
-    batches.forEach((batch, index) => {
-      setTimeout(() => {
-        console.log(`🔵 [NEXT VERSION] Loading batch ${index + 1}/${batches.length} with ${batch.length} conversations`);
-        fetchMessagesForBatch(batch);
-      }, index * 100); // 100ms delay between batches
-    });
-  }
-  
-  // Also ensure current conversation is loaded if it's not part of the batches
-  if (props.conversation && props.conversation.id && !messages.value[props.conversation.id]) {
-    console.log(`🔵 [NEXT VERSION] Loading current conversation ${props.conversation.id} separately`);
-    fetchMessagesForBatch([props.conversation.id]);
-  }
-};
-
-// Add intersection observer for lazy loading
-const setupIntersectionObserver = () => {
-  console.log('🔵 [NEXT VERSION] Setting up intersection observer');
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const conversationId = entry.target.dataset.conversationId;
-        if (conversationId && !messages.value[conversationId]) {
-          console.log(`🔵 [NEXT VERSION] Conversation ${conversationId} visible, loading messages`);
-          fetchMessagesForBatch([conversationId]);
-        }
-      }
-    });
-  }, { threshold: 0.1 });
-  
-  return observer;
-};
+// Provide basic message access
+provide('conversationMessages', {
+  messages: computed(() => messages.value)
+});
 
 onMounted(() => {
-  console.log('🔵 [NEXT VERSION] ConversationCard component mounted');
-  console.log('🔵 [NEXT VERSION] Initial conversation data:', {
-    id: props.conversation?.id,
-    hasMessages: !!props.conversation?.messages,
-    messageCount: props.conversation?.messages?.length || 0,
-    hasLastMessage: !!props.conversation?.last_non_activity_message,
-    messagesFromStore: !!messages.value[props.conversation?.id]
+  console.log('🔵 [NEXT VERSION] ConversationCard component mounted for conversation:', props.conversation?.id);
+  
+  // Setup store subscription to listen for message updates
+  const store = useStore();
+  const unsubscribe = store.subscribe((mutation) => {
+    // Only listen for mutations related to this conversation
+    if (!props.conversation) return;
+    
+    // Check if this mutation concerns messages
+    if (mutation.type.includes('MESSAGE') && 
+        mutation.payload && 
+        mutation.payload.conversation_id === props.conversation.id) {
+      // Force reactivity update by toggling a reactive property
+      props.conversation._lastUpdate = Date.now();
+    }
   });
   
-  // FIRST ACTION: Load ALL messages - must happen before anything else
-  console.log('🔵 [NEXT VERSION] IMMEDIATE MESSAGE LOADING - loading all conversations');
-  loadVisibleMessages();
-  
-  // FORCE IMMEDIATE MESSAGE LOADING for current conversation, if it exists
-  if (props.conversation && props.conversation.id) {
-    console.log(`🔵 [NEXT VERSION] FORCING immediate message load for current conversation ${props.conversation.id}`);
-    try {
-      axios.post('/api/v1/conversations/batch_messages', {
-        conversation_ids: [props.conversation.id]
-      }).then(response => {
-        console.log(`🔵 [NEXT VERSION] Forced load successful for ${props.conversation.id}`);
-        if (response.data && response.data.length > 0) {
-          response.data.forEach(conversationData => {
-            console.log(`🔵 [NEXT VERSION] Loaded ${conversationData.messages?.length || 0} messages for conversation ${conversationData.conversation_id}`);
-            messages.value[conversationData.conversation_id] = conversationData.messages;
-            
-            // Force the conversation to update its messages directly
-            if (props.conversation.id === conversationData.conversation_id) {
-              props.conversation.messages = conversationData.messages;
-              console.log(`🔵 [NEXT VERSION] Updated conversation directly with ${conversationData.messages.length} messages`);
-            }
-          });
-          // Force reactivity
-          messages.value = { ...messages.value };
-        }
-      }).catch(err => {
-        console.error('🔵 [NEXT VERSION] Error in forced message loading:', err);
-      });
-    } catch (error) {
-      console.error('🔵 [NEXT VERSION] Exception in forced message loading:', error);
-    }
-  }
-  
-  // Setup observers after messages are already loading
-  const observer = setupIntersectionObserver();
-  
-  // Apply observer to conversation elements - these will help load any missed messages
-  const elements = document.querySelectorAll('[data-conversation-id]');
-  console.log(`🔵 [NEXT VERSION] Found ${elements.length} conversation elements to observe`);
-  elements.forEach(el => {
-    observer.observe(el);
+  // Clean up subscription on unmount
+  onUnmounted(() => {
+    unsubscribe();
   });
 });
 
-// Provide enhanced message access with caching
-provide('conversationMessages', {
-  messages,
-  getMessageCount: (conversationId) => {
-    if (messageCache.has(conversationId)) {
-      return messageCache.get(conversationId);
-    }
-    
-    const messages = messages.value[conversationId] || [];
-    
-    // Find the index of the last human agent response
-    const lastHumanResponseIndex = [...messages].reverse().findIndex(
-      message => message.message_type === 'outgoing' && !isAutomatedAckMessage(message)
-    );
-    
-    // If no human response found, return 0
-    if (lastHumanResponseIndex === -1) {
-      messageCache.set(conversationId, 0);
-      return 0;
-    }
-    
-    // Get messages after the last human response
-    const messagesSinceLastResponse = messages.slice(-lastHumanResponseIndex);
-    
-    // Count incoming messages since last human response
-    const count = messagesSinceLastResponse.filter(
-      message => message.message_type === 'incoming'
-    ).length;
-    
-    messageCache.set(conversationId, count);
-    return count;
-  }
+onUnmounted(() => {
+  // Cleanup logic when component is unmounted
 });
+
+// Add a watcher for the conversation property to keep indicators updated
+watch(() => props.conversation, (newConversation) => {
+  if (!newConversation) return;
+  
+  console.log('🔵 [NEXT VERSION] Conversation updated:', {
+    id: newConversation.id,
+    hasLastNonActivityMessage: !!newConversation.last_non_activity_message,
+    lastMessageType: newConversation.last_non_activity_message?.message_type,
+    unreadCount: newConversation.unread_count
+  });
+  
+  // This will trigger a re-render of child components and update indicators
+}, { deep: true });
 </script>
 
 <template>
