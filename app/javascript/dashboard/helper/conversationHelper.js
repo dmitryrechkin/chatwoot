@@ -170,8 +170,8 @@ export const isAutomatedAckMessage = (message, conversation) => {
  * @param {Object} conversation - The conversation object
  * @returns {number} - The count of customer messages since last human response
  */
-export const getCustomerMessagesSinceResponse = (conversation) => {
-  console.log('DEBUG - getCustomerMessagesSinceResponse called for:', conversation?.id);
+export const getNewIncomingMessageCount = (conversation) => {
+  console.log('DEBUG - getNewIncomingMessageCount called for:', conversation?.id);
   
   // If conversation doesn't exist or id is not available, return 0
   if (!conversation || !conversation.messages) {
@@ -181,6 +181,7 @@ export const getCustomerMessagesSinceResponse = (conversation) => {
   
   console.log('DEBUG - Conversation:', JSON.stringify(conversation, null, 2));
 
+  // Filter out activity messages
   const messages = conversation.messages.filter(message => message.message_type < 2);
 
   // If there are no messages, fallback to last non-activity message
@@ -209,7 +210,7 @@ export const getCustomerMessagesSinceResponse = (conversation) => {
 
   console.log('DEBUG - Processing messages array with', messages.length, 'messages');
   
-  let customerMessageCount = 0;
+  let newIncomingMessagesCount = 0;
   let lastMessageIsAutomated = false;
   
   // Loop through messages (oldest to newest)
@@ -219,8 +220,8 @@ export const getCustomerMessagesSinceResponse = (conversation) => {
     // Customer/Incoming message (message_type === 0)
     if (message.message_type === 0) {
       lastMessageIsAutomated = false;
-      customerMessageCount++;
-      console.log('DEBUG - Found customer message, current count:', customerMessageCount);
+      newIncomingMessagesCount++;
+      console.log('DEBUG - Found customer message, current count:', newIncomingMessagesCount);
     } 
     // Agent/Outgoing message (message_type === 1)
     else if (message.message_type === 1) {
@@ -231,20 +232,20 @@ export const getCustomerMessagesSinceResponse = (conversation) => {
         console.log('DEBUG - Skipping automated agent message');
       } else {
         // Found a human agent response - stop counting
-        console.log('DEBUG - Found human agent response, stopping count at:', customerMessageCount);
-        customerMessageCount = 0;
+        console.log('DEBUG - Found human agent response, stopping count at:', newIncomingMessagesCount);
+        newIncomingMessagesCount = 0;
         lastMessageIsAutomated = false;
       }
     }
   });
   
-  if (lastMessageIsAutomated && customerMessageCount === 0) {
+  if (lastMessageIsAutomated && newIncomingMessagesCount === 0) {
     console.log('DEBUG - Last message was automated and there were no customer messages, returning 1');
     return 1;
   }
 
-  console.log('DEBUG - Final count of customer messages since last human response:', customerMessageCount);
-  return customerMessageCount;
+  console.log('DEBUG - Final count of customer messages since last human response:', newIncomingMessagesCount);
+  return newIncomingMessagesCount;
 };
 
 /**

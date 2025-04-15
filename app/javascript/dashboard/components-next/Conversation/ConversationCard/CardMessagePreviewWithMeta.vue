@@ -5,7 +5,7 @@ import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 import { 
   getLastMessage, 
   isAutomatedAckMessage, 
-  getCustomerMessagesSinceResponse,
+  getNewIncomingMessageCount,
   shouldShowUnread as shouldShowUnreadHelper
 } from 'dashboard/helper/conversationHelper';
 
@@ -69,7 +69,7 @@ const shouldShowUnread = computed(() => {
 
 const customerMessagesSinceResponse = computed(() => {
   console.log('CardMessagePreviewWithMeta - computing customerMessagesSinceResponse for:', props.conversation.id);
-  const count = getCustomerMessagesSinceResponse(props.conversation, props.unreadCount);
+  const count = getNewIncomingMessageCount(props.conversation, props.unreadCount);
   console.log('CardMessagePreviewWithMeta - result:', count);
   return count;
 });

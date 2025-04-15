@@ -3,7 +3,7 @@ import { mapGetters } from 'vuex';
 import { 
   getLastMessage, 
   isAutomatedAckMessage, 
-  getCustomerMessagesSinceResponse,
+  getNewIncomingMessageCount,
   shouldShowUnread
 } from 'dashboard/helper/conversationHelper';
 import Thumbnail from '../Thumbnail.vue';
@@ -148,7 +148,7 @@ export default {
         return 0;
       }
 
-      const count = getCustomerMessagesSinceResponse(this.chat);
+      const count = getNewIncomingMessageCount(this.chat);
       
       console.log('🔴 [LEGACY VERSION] Result:', {
         chatId: this.chat.id,
