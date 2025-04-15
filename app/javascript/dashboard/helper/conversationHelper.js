@@ -185,7 +185,7 @@ export const getCustomerMessagesSinceResponse = (conversation) => {
 
   console.log('DEBUG - Last message:', JSON.stringify(lastMessage, null, 2));
 
-  const messages = conversation.messages;
+  const messages = conversation.messages.filter(message => message.message_type < 2);
 
   console.log('DEBUG - Processing messages array with', messages.length, 'messages');
   
@@ -193,6 +193,8 @@ export const getCustomerMessagesSinceResponse = (conversation) => {
   
   // Loop through messages (oldest to newest)
   messages.forEach(message => {
+    console.log('DEBUG - Processing message:', JSON.stringify(message, null, 2));
+
     // Customer/Incoming message (message_type === 0)
     if (message.message_type === 0) {
       customerMessageCount++;
