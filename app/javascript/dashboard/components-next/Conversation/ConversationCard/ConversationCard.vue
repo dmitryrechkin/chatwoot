@@ -142,19 +142,10 @@ const fetchMessagesForBatch = debounce(async (conversationIds) => {
     return;
   }
   
-  // Filter out conversations we already have messages for
-  const conversationsToFetch = conversationIds.filter(id => !messages.value[id]);
-  if (conversationsToFetch.length === 0) {
-    console.log('🔵 [NEXT VERSION] No new conversations to fetch');
-    return;
-  }
-  
-  console.log(`🔵 [NEXT VERSION] Fetching messages for conversations: ${conversationsToFetch.join(', ')}`);
-  
   try {
     isLoading.value = true;
     const response = await axios.post('/api/v1/conversations/batch_messages', {
-      conversation_ids: conversationsToFetch
+      conversation_ids: conversationIds
     });
     
     if (!response.data || !Array.isArray(response.data)) {
@@ -190,17 +181,25 @@ const fetchMessagesForBatch = debounce(async (conversationIds) => {
       // Clear cache when new messages arrive
       messageCache.delete(convoId);
       
-      // Update conversation object directly if it's in our props
-      const matchingConvo = props.conversations.find(c => c.id === convoId);
-      if (matchingConvo) {
-        console.log(`🔵 [NEXT VERSION] Updating conversation ${convoId} directly with ${conversationData.messages.length} messages`);
-        matchingConvo.messages = conversationData.messages;
+      // MORE AGGRESSIVE APPROACH: Update ALL matching conversations in props.conversations
+      // Find all conversations with this ID in the conversations array
+      const matchingConvos = props.conversations.filter(c => c.id === parseInt(convoId) || c.id === convoId);
+      if (matchingConvos.length > 0) {
+        console.log(`🔵 [NEXT VERSION] Updating ${matchingConvos.length} conversation objects with ID ${convoId}`);
+        matchingConvos.forEach(convo => {
+          // Update messages and add a flag indicating messages are loaded
+          convo.messages = conversationData.messages;
+          convo.allMessagesLoaded = true;
+        });
+      } else {
+        console.log(`🔵 [NEXT VERSION] No matching conversations found for ID ${convoId} in props`);
       }
       
       // Update current conversation if it matches
-      if (props.conversation && props.conversation.id === convoId) {
+      if (props.conversation && (props.conversation.id === parseInt(convoId) || props.conversation.id === convoId)) {
         console.log(`🔵 [NEXT VERSION] Updating current conversation ${convoId} directly`);
         props.conversation.messages = conversationData.messages;
+        props.conversation.allMessagesLoaded = true;
       }
     });
     
@@ -211,9 +210,9 @@ const fetchMessagesForBatch = debounce(async (conversationIds) => {
   } catch (error) {
     console.error('🔵 [NEXT VERSION] Error fetching batch messages:', error);
     // If there was an API error, try individual fetch for conversations 
-    if (conversationsToFetch.length > 1) {
+    if (conversationIds.length > 1) {
       console.log('🔵 [NEXT VERSION] Attempting individual fetch for each conversation');
-      conversationsToFetch.forEach(id => {
+      conversationIds.forEach(id => {
         setTimeout(() => {
           fetchMessagesForBatch([id]);
         }, 100);
@@ -228,26 +227,31 @@ const fetchMessagesForBatch = debounce(async (conversationIds) => {
 const loadVisibleMessages = () => {
   console.log('🔵 [NEXT VERSION] loadVisibleMessages called for ConversationCard');
   
-  // Increase batch size to load more conversations at once
-  const increasedBatchSize = 30;
-  
-  // Get all conversations without loaded messages
-  const conversationsToLoad = props.conversations
-    .filter(conv => !messages.value[conv.id])
-    .slice(0, increasedBatchSize);
+  // Load ALL conversations without any batching
+  const conversationsToLoad = props.conversations.map(conv => conv.id);
     
-  console.log(`🔵 [NEXT VERSION] Found ${conversationsToLoad.length} conversations without loaded messages`);
+  console.log(`🔵 [NEXT VERSION] Loading ALL conversations immediately: ${conversationsToLoad.length} conversations`);
   
   if (conversationsToLoad.length > 0) {
-    console.log('🔵 [NEXT VERSION] Loading all visible conversations immediately:', 
-      conversationsToLoad.map(c => c.id));
-    fetchMessagesForBatch(conversationsToLoad.map(conv => conv.id));
+    // Split into batches of 30 to avoid overwhelming the API
+    const batches = [];
+    for (let i = 0; i < conversationsToLoad.length; i += 30) {
+      batches.push(conversationsToLoad.slice(i, i + 30));
+    }
+    
+    console.log(`🔵 [NEXT VERSION] Split into ${batches.length} batches for loading`);
+    
+    // Load each batch with a small delay between batches
+    batches.forEach((batch, index) => {
+      setTimeout(() => {
+        console.log(`🔵 [NEXT VERSION] Loading batch ${index + 1}/${batches.length} with ${batch.length} conversations`);
+        fetchMessagesForBatch(batch);
+      }, index * 100); // 100ms delay between batches
+    });
   }
   
-  // Also ensure current conversation is loaded if it's not part of the batch
-  if (props.conversation && props.conversation.id && 
-      !messages.value[props.conversation.id] && 
-      !conversationsToLoad.find(c => c.id === props.conversation.id)) {
+  // Also ensure current conversation is loaded if it's not part of the batches
+  if (props.conversation && props.conversation.id && !messages.value[props.conversation.id]) {
     console.log(`🔵 [NEXT VERSION] Loading current conversation ${props.conversation.id} separately`);
     fetchMessagesForBatch([props.conversation.id]);
   }
@@ -281,9 +285,13 @@ onMounted(() => {
     messagesFromStore: !!messages.value[props.conversation?.id]
   });
   
-  // FORCE IMMEDIATE MESSAGE LOADING - No delay to ensure indicators appear immediately
+  // FIRST ACTION: Load ALL messages - must happen before anything else
+  console.log('🔵 [NEXT VERSION] IMMEDIATE MESSAGE LOADING - loading all conversations');
+  loadVisibleMessages();
+  
+  // FORCE IMMEDIATE MESSAGE LOADING for current conversation, if it exists
   if (props.conversation && props.conversation.id) {
-    console.log(`🔵 [NEXT VERSION] FORCING immediate message load for conversation ${props.conversation.id}`);
+    console.log(`🔵 [NEXT VERSION] FORCING immediate message load for current conversation ${props.conversation.id}`);
     try {
       axios.post('/api/v1/conversations/batch_messages', {
         conversation_ids: [props.conversation.id]
@@ -311,18 +319,15 @@ onMounted(() => {
     }
   }
   
-  // Apply observer to load any other conversations that become visible
+  // Setup observers after messages are already loading
   const observer = setupIntersectionObserver();
   
-  // Apply observer to conversation elements
+  // Apply observer to conversation elements - these will help load any missed messages
   const elements = document.querySelectorAll('[data-conversation-id]');
   console.log(`🔵 [NEXT VERSION] Found ${elements.length} conversation elements to observe`);
   elements.forEach(el => {
     observer.observe(el);
   });
-  
-  // No delays for message loading - load all visible conversations immediately
-  loadVisibleMessages();
 });
 
 // Provide enhanced message access with caching

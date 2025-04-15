@@ -67,8 +67,19 @@ const shouldShowUnread = computed(() => {
 
 const customerMessagesSinceResponse = computed(() => {
   console.log('CardMessagePreview - computing customerMessagesSinceResponse for:', props.conversation.id);
+  
+  // Use the cached customer messages count if available
+  if (conversationMessages && typeof conversationMessages.getMessageCount === 'function') {
+    const cachedCount = conversationMessages.getMessageCount(props.conversation.id);
+    if (cachedCount !== undefined) {
+      console.log('CardMessagePreview - using cached count from provider:', cachedCount);
+      return cachedCount;
+    }
+  }
+  
+  // Fallback to the direct calculation
   const count = getCustomerMessagesSinceResponse(props.conversation, props.unreadCount);
-  console.log('CardMessagePreview - result:', count);
+  console.log('CardMessagePreview - computed count:', count);
   return count;
 });
 
