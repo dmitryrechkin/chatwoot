@@ -68,27 +68,20 @@ const shouldShowUnread = computed(() => {
 const customerMessagesSinceResponse = computed(() => {
   console.log('CardMessagePreview - computing customerMessagesSinceResponse for:', props.conversation.id);
   
-  // Use the cached customer messages count if available
-  if (conversationMessages && typeof conversationMessages.getMessageCount === 'function') {
-    const cachedCount = conversationMessages.getMessageCount(props.conversation.id);
-    if (cachedCount !== undefined) {
-      console.log('CardMessagePreview - using cached count from provider:', cachedCount);
-      return cachedCount;
-    }
-  }
-  
-  // Fallback to the direct calculation
-  const count = getCustomerMessagesSinceResponse(props.conversation, props.unreadCount);
+  // Simply use the getCustomerMessagesSinceResponse function which now relies on last_non_activity_message
+  const count = getCustomerMessagesSinceResponse(props.conversation);
   console.log('CardMessagePreview - computed count:', count);
   return count;
 });
 
 onMounted(() => {
-  console.log('Component mounted');
-  console.log('Conversation:', props.conversation);
-  console.log('lastNonActivityMessage:', props.conversation.lastNonActivityMessage);
-  console.log('unreadCount:', props.conversation.unreadCount);
-  // fetchMessages();
+  console.log('MessagePreview component mounted');
+  console.log('Conversation ID:', props.conversation.id);
+  console.log('lastNonActivityMessage:', 
+    props.conversation.last_non_activity_message ? 
+    `ID: ${props.conversation.last_non_activity_message.id}, Type: ${props.conversation.last_non_activity_message.message_type}` : 
+    'None');
+  console.log('unreadCount:', props.unreadCount);
 });
 </script>
 
