@@ -200,6 +200,8 @@ export const getCustomerMessagesSinceResponse = (conversation) => {
     return 0;
   }
   
+  console.log('DEBUG - Conversation messages:', JSON.stringify(conversation.messages, null, 2) );
+
   console.log('DEBUG - Processing messages array with', conversation.messages.length, 'messages');
   
   let customerMessageCount = 0;
