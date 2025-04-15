@@ -1,3 +1,4 @@
+import { MESSAGE_TYPES } from 'dashboard/components-next/message/constants';
 /**
  * Determines the last non-activity message between store and API messages.
  * @param {Object} messageInStore - The last non-activity message from the store.
@@ -146,7 +147,7 @@ export const isAutomatedAckMessage = (message, conversation) => {
     
     // Only mark as automated if it's an acknowledgment message sent quickly
     if (timeDifference <= 5000 && 
-        message.message_type === 1 && 
+        message.message_type === MESSAGE_TYPES.OUTGOING && 
         message.content_attributes?.automated_acknowledgement === true) {
       console.log('Message is automated (CASE 4): Automated acknowledgment sent within 5 seconds of conversation creation', JSON.stringify({
         messageId: message.id,
@@ -193,7 +194,7 @@ export const getNewIncomingMessageCount = (conversation) => {
     console.log('DEBUG - Last non-activity message:', JSON.stringify(lastMessage, null, 2));
   
     // Customer/Incoming message (message_type === 0)
-    if (lastMessage.message_type === 0) {
+    if (lastMessage.message_type === MESSAGE_TYPES.INCOMING) {
       console.log('DEBUG - Last message is an activity message, returning 0');
       return 1;
     }
@@ -218,13 +219,13 @@ export const getNewIncomingMessageCount = (conversation) => {
     console.log('DEBUG - Processing message:', JSON.stringify(message, null, 2));
     
     // Customer/Incoming message (message_type === 0)
-    if (message.message_type === 0) {
+    if (message.message_type === MESSAGE_TYPES.INCOMING) {
       lastMessageIsAutomated = false;
       newIncomingMessagesCount++;
       console.log('DEBUG - Found customer message, current count:', newIncomingMessagesCount);
     } 
     // Agent/Outgoing message (message_type === 1)
-    else if (message.message_type === 1) {
+    else if (message.message_type === MESSAGE_TYPES.OUTGOING) {
       const isAutomated = isAutomatedAckMessage(message, conversation);
       
       if (isAutomated) {
@@ -248,25 +249,3 @@ export const getNewIncomingMessageCount = (conversation) => {
   return newIncomingMessagesCount;
 };
 
-/**
- * Determines if a conversation should show the unread indicator
- * @param {Object} conversation - The conversation object
- * @param {number} unreadCount - The number of unread messages
- * @returns {boolean} - True if the unread indicator should be shown
- */
-export const shouldShowUnread = (conversation, unreadCount) => {
-  // Show unread indicator if there are unread messages according to parameters or the conversation
-  if (unreadCount > 0 || (conversation && conversation.unread_count > 0)) {
-    return true;
-  }
-  
-  // If we don't have unread count, check the last message
-  if (conversation && conversation.last_non_activity_message) {
-    const lastMessage = conversation.last_non_activity_message;
-    // Show indicator if last message is from customer (message_type === 0)
-    return lastMessage.message_type === 0;
-  }
-  
-  // Default to false if we have no information
-  return false;
-};

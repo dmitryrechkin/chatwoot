@@ -3,8 +3,7 @@ import { mapGetters } from 'vuex';
 import { 
   getLastMessage, 
   isAutomatedAckMessage, 
-  getNewIncomingMessageCount,
-  shouldShowUnread
+  getNewIncomingMessageCount
 } from 'dashboard/helper/conversationHelper';
 import Thumbnail from '../Thumbnail.vue';
 import MessagePreview from './MessagePreview.vue';
@@ -123,10 +122,6 @@ export default {
       return this.chat.unread_count;
     },
 
-    shouldShowUnread() {
-      return shouldShowUnread(this.chat, this.unreadCount);
-    },
-
     hasUnread() {
       return this.unreadCount > 0;
     },
@@ -140,8 +135,8 @@ export default {
     },
 
     // Calculate the number of customer messages since last agent response
-    customerMessagesSinceResponse() {
-      console.log('🔴 [LEGACY VERSION] Computing customerMessagesSinceResponse for:', this.chat?.id);
+    newIncomingMessageCount() {
+      console.log('🔴 [LEGACY VERSION] Computing newIncomingMessageCount for:', this.chat?.id);
 
       if (!this.chat) {
         console.log('🔴 [LEGACY VERSION] No chat object');
@@ -392,21 +387,21 @@ export default {
             :created-at-timestamp="chat.created_at"
           />
         </span>
-        <!-- Messages Since Response Indicator (Blue) -->
+        <!-- New Incoming Messages Indicator (Blue) -->
         <span
-          v-if="customerMessagesSinceResponse > 0"
+          v-if="newIncomingMessageCount > 0"
           class="shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 mr-1 min-w-[1rem] px-1 py-0 text-center text-white bg-n-blue-10"
-          :title="customerMessagesSinceResponse === 1 ? '1 message since your last response' : `${customerMessagesSinceResponse} messages since your last response`"
+          :title="newIncomingMessageCount === 1 ? '1 message since your last response' : `${newIncomingMessageCount} messages since your last response`"
         >
-          {{ customerMessagesSinceResponse }}
+          {{ newIncomingMessageCount }}
         </span>
         <!-- Unread/Attention Indicator (Green) -->
         <span
-          v-if="shouldShowUnread"
+          v-if="unreadCount > 0"
           class="unread shadow-lg rounded-full text-xxs font-semibold h-4 leading-4 min-w-[1rem] px-1 py-0 text-center text-white bg-green-500"
-          :title="unreadCount > 0 ? `${unreadCount} unread message${unreadCount > 1 ? 's' : ''}` : 'Needs attention'"
+          :title="`${unreadCount} unread message${unreadCount > 1 ? 's' : ''}`"
         >
-          {{ unreadCount > 0 ? unreadCount : '!' }}
+          {{ unreadCount }}
         </span>
       </div>
       <CardLabels :conversation-labels="chat.labels" class="mt-0.5 mx-2 mb-0">

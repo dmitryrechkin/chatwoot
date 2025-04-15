@@ -5,8 +5,7 @@ import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
 import { 
   getLastMessage, 
   isAutomatedAckMessage, 
-  getNewIncomingMessageCount,
-  shouldShowUnread as shouldShowUnreadHelper
+  getNewIncomingMessageCount
 } from 'dashboard/helper/conversationHelper';
 
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
@@ -36,7 +35,7 @@ const slaCardLabelRef = ref(null);
 const { getPlainText } = useMessageFormatter();
 
 const lastNonActivityMessageContent = computed(() => {
-  const { lastNonActivityMessage = {}, customAttributes = {} } =
+  const { lastNonActivityMessage = {} } =
     props.conversation;
   return getPlainText(
     lastNonActivityMessage?.content || t('CHAT_LIST.NO_CONTENT')
@@ -44,8 +43,10 @@ const lastNonActivityMessageContent = computed(() => {
 });
 
 const emailSubject = computed(() => {
-  const { additional_attributes: additionalAttributes = {} } = props.conversation;
-  return additionalAttributes.mail_subject || null;
+  const { additional_attributes: additionalAttributes = {}, customAttributes = {} } = props.conversation;
+  const { email: { subject } = {} } = customAttributes;
+
+  return additionalAttributes.mail_subject || subject || null;
 });
 
 const conversationId = computed(() => {
@@ -63,15 +64,18 @@ const assignee = computed(() => {
 
 const unreadMessagesCount = computed(() => props.unreadCount);
 
-const shouldShowUnread = computed(() => {
-  return shouldShowUnreadHelper(props.conversation, props.unreadCount);
+const newIncomingMessageCount = computed(() => {
+  console.log('CardMessagePreviewWithMeta - computing newIncomingMessageCount for:', props.conversation.id);
+
+  const count = getNewIncomingMessageCount(props.conversation, props.unreadCount);
+
+  console.log('CardMessagePreviewWithMeta - result:', count);
+
+  return count;
 });
 
-const customerMessagesSinceResponse = computed(() => {
-  console.log('CardMessagePreviewWithMeta - computing customerMessagesSinceResponse for:', props.conversation.id);
-  const count = getNewIncomingMessageCount(props.conversation, props.unreadCount);
-  console.log('CardMessagePreviewWithMeta - result:', count);
-  return count;
+const hasNewIncomingMessages = computed(() => {
+  return newIncomingMessageCount.value > 0;
 });
 
 const hasSlaThreshold = computed(() => {
@@ -88,36 +92,36 @@ defineExpose({
 <template>
   <div class="flex flex-col w-full gap-1">
     <div v-if="emailSubject" class="flex items-center mb-0 text-sm font-medium text-n-slate-12"
-         :class="shouldShowUnread ? 'font-medium' : ''">
+         :class="hasNewIncomingMessages ? 'font-medium' : ''">
       <span>↑</span>
       <span class="truncate ml-1">{{ emailSubject }}</span>
     </div>
 
     <div class="flex items-center justify-between w-full gap-2 py-1 h-7">
-      <p class="mb-0 text-sm leading-7 text-n-slate-9 line-clamp-1" :class="shouldShowUnread ? 'font-medium' : ''">
+      <p class="mb-0 text-sm leading-7 text-n-slate-9 line-clamp-1" :class="hasNewIncomingMessages ? 'font-medium' : ''">
         {{ lastNonActivityMessageContent }}
         <span class="text-xs text-n-slate-9"> #{{ conversationId }}</span>
       </p>
 
       <div class="flex items-center flex-shrink-0 gap-1">
-        <!-- Messages Since Response Indicator (Blue) -->
+        <!-- New Incoming Messages Indicator (Blue) -->
         <div
-          v-if="customerMessagesSinceResponse > 0"
+          v-if="newIncomingMessageCount > 0"
           class="inline-flex items-center justify-center rounded-full size-5 bg-blue-600"
-          :title="customerMessagesSinceResponse === 1 ? '1 message since your last response' : `${customerMessagesSinceResponse} messages since your last response`"
+          :title="newIncomingMessageCount === 1 ? '1 message since your last response' : `${newIncomingMessageCount} messages since your last response`"
         >
           <span class="text-xs font-semibold text-white">
-            {{ customerMessagesSinceResponse }}
+            {{ newIncomingMessageCount }}
           </span>
         </div>
         <!-- Unread/Attention Indicator (Green) -->
         <div
-          v-if="shouldShowUnread"
+          v-if="unreadMessagesCount > 0"
           class="inline-flex items-center justify-center rounded-full size-5 bg-green-500"
-          :title="unreadMessagesCount > 0 ? `${unreadMessagesCount} unread message${unreadMessagesCount > 1 ? 's' : ''}` : 'Needs attention'"
+          :title="`${unreadMessagesCount} unread message${unreadMessagesCount > 1 ? 's' : ''}`"
         >
           <span class="text-xs font-semibold text-white">
-            {{ unreadMessagesCount > 0 ? unreadMessagesCount : '!' }}
+            {{ unreadMessagesCount }}
           </span>
         </div>
       </div>
